@@ -25,7 +25,17 @@ const BrandSection = ({ selectedBrand, onBrandSelect }: BrandSectionProps) => {
                 : "bg-card border-border hover:shadow-lg hover:-translate-y-1"
             }`}
           >
-            <span className="text-3xl sm:text-4xl mb-3">{brand.logo}</span>
+            {brand.image ? (
+              <div className="w-full h-16 sm:h-20 flex items-center justify-center mb-3">
+                <img
+                  src={brand.image}
+                  alt={`${brand.name} logo`}
+                  className="max-h-full max-w-[80%] object-contain"
+                />
+              </div>
+            ) : (
+              <span className="text-3xl sm:text-4xl mb-3">{brand.logo}</span>
+            )}
             <span
               className={`font-semibold text-sm sm:text-base tracking-wide ${
                 selectedBrand === brand.id ? "text-primary-foreground" : "text-foreground"
