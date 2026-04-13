@@ -11,23 +11,23 @@ const ProductCard = ({ product }: ProductCardProps) => {
   const whatsappUrl = `https://wa.me/27000000000?text=${whatsappMessage}`;
 
   return (
-    <div className="bg-background rounded-lg border border-border p-4 flex flex-col h-full transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+    <div className="bg-card rounded-lg border border-border p-5 flex flex-col h-full transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
       {/* Product Image Placeholder */}
-      <div className="bg-secondary rounded-md flex items-center justify-center h-40 mb-4">
-        <div className="text-4xl opacity-30">🛢️</div>
+      <div className="bg-muted rounded-md flex items-center justify-center h-44 mb-5">
+        <div className="text-5xl opacity-20">🛢️</div>
       </div>
 
       {/* Product Name */}
-      <h4 className="font-semibold text-foreground text-sm sm:text-base mb-2 flex-1">
+      <h4 className="font-semibold text-foreground text-sm sm:text-base mb-3 leading-snug flex-1">
         {product.name}
       </h4>
 
       {/* Sizes */}
-      <div className="flex flex-wrap gap-1.5 mb-4">
+      <div className="flex flex-wrap gap-1.5 mb-5">
         {product.sizes.map((size) => (
           <span
             key={size}
-            className="text-xs font-medium px-2 py-0.5 rounded bg-secondary text-secondary-foreground"
+            className="text-xs font-medium px-2.5 py-1 rounded-sm bg-muted text-muted-foreground"
           >
             {size}
           </span>

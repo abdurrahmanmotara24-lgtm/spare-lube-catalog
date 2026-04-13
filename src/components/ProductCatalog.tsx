@@ -39,7 +39,6 @@ const ProductCatalog = ({
     });
   }, [selectedBrand, selectedCategory, selectedSize, searchQuery]);
 
-  // Group by category
   const grouped = useMemo(() => {
     const map: Record<string, typeof filtered> = {};
     filtered.forEach((p) => {
@@ -54,14 +53,13 @@ const ProductCatalog = ({
     : null;
 
   return (
-    <section className="max-w-7xl mx-auto section-padding py-12">
+    <section className="max-w-7xl mx-auto section-padding py-16">
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-8">
-        {/* Category Filter */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-10">
         <select
           value={selectedCategory || ""}
           onChange={(e) => onCategoryChange(e.target.value || null)}
-          className="h-10 px-3 rounded-md bg-secondary text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          className="h-11 px-4 rounded-md bg-muted text-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="">All Categories</option>
           {categories.map((cat) => (
@@ -69,11 +67,10 @@ const ProductCatalog = ({
           ))}
         </select>
 
-        {/* Size Filter */}
         <select
           value={selectedSize || ""}
           onChange={(e) => onSizeChange(e.target.value || null)}
-          className="h-10 px-3 rounded-md bg-secondary text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          className="h-11 px-4 rounded-md bg-muted text-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="">All Sizes</option>
           {allSizes.map((size) => (
@@ -87,7 +84,7 @@ const ProductCatalog = ({
               onCategoryChange(null);
               onSizeChange(null);
             }}
-            className="text-sm text-primary font-medium hover:underline self-center"
+            className="text-sm text-primary font-semibold hover:underline self-center"
           >
             Clear filters
           </button>
@@ -95,24 +92,24 @@ const ProductCatalog = ({
       </div>
 
       {/* Title */}
-      <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
+      <h2 className="font-heading text-2xl sm:text-3xl font-bold text-foreground uppercase tracking-wide mb-2">
         {brandName ? `${brandName} Products` : "All Products"}
       </h2>
-      <p className="text-muted-foreground mb-8">
+      <p className="text-muted-foreground text-sm mb-10">
         {filtered.length} product{filtered.length !== 1 ? "s" : ""} found
       </p>
 
       {filtered.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">
+        <div className="text-center py-20 text-muted-foreground">
           <p className="text-lg">No products found matching your criteria.</p>
         </div>
       ) : (
         Object.entries(grouped).map(([category, prods]) => (
-          <div key={category} className="mb-12">
-            <h3 className="text-lg font-bold text-foreground mb-6 pb-2 border-b border-border">
+          <div key={category} className="mb-14">
+            <h3 className="font-heading text-lg font-semibold text-foreground uppercase tracking-wider mb-6 pb-3 border-b border-border">
               {category}
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
               {prods.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
