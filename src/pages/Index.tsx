@@ -1,16 +1,53 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState, useRef } from "react";
+import Header from "@/components/Header";
+import Hero from "@/components/Hero";
+import BrandSection from "@/components/BrandSection";
+import ProductCatalog from "@/components/ProductCatalog";
+import WhyChoose from "@/components/WhyChoose";
+import ContactSection from "@/components/ContactSection";
+import Footer from "@/components/Footer";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const Index = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+
+  const catalogRef = useRef<HTMLDivElement>(null);
+
+  const scrollToCatalog = () => {
+    catalogRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleBrandSelect = (brandId: string | null) => {
+    setSelectedBrand(brandId);
+    if (brandId) {
+      setTimeout(() => {
+        catalogRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
+    <div className="min-h-screen bg-background">
+      <Header searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+      <Hero onBrowseClick={scrollToCatalog} />
+      <BrandSection selectedBrand={selectedBrand} onBrandSelect={handleBrandSelect} />
+      <div ref={catalogRef}>
+        <ProductCatalog
+          selectedBrand={selectedBrand}
+          selectedCategory={selectedCategory}
+          selectedSize={selectedSize}
+          searchQuery={searchQuery}
+          onCategoryChange={setSelectedCategory}
+          onSizeChange={setSelectedSize}
+        />
+      </div>
+      <WhyChoose />
+      <ContactSection />
+      <Footer />
     </div>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
