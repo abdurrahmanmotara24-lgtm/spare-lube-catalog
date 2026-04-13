@@ -11,14 +11,21 @@ export interface Brand {
   id: string;
   name: string;
   logo: string;
+  image?: string;
 }
 
+import shellLogo from "@/assets/brands/shell.png";
+import castrolLogo from "@/assets/brands/castrol.jpeg";
+import blixemLogo from "@/assets/brands/blixem.png";
+import engenLogo from "@/assets/brands/engen.jpeg";
+
 export const brands: Brand[] = [
-  { id: "shell", name: "Shell", logo: "🐚" },
-  { id: "castrol", name: "Castrol", logo: "🛢️" },
+  { id: "shell", name: "Shell", logo: "🐚", image: shellLogo },
+  { id: "castrol", name: "Castrol", logo: "🛢️", image: castrolLogo },
+  { id: "engen", name: "Engen", logo: "⛽", image: engenLogo },
   { id: "valvoline", name: "Valvoline", logo: "⚙️" },
   { id: "motorlube", name: "Motorlube", logo: "🔧" },
-  { id: "blixem", name: "Blixem", logo: "⚡" },
+  { id: "blixem", name: "Blixem", logo: "⚡", image: blixemLogo },
   { id: "g4", name: "G4 Lubricants", logo: "🏭" },
   { id: "winners", name: "Winners", logo: "🏆" },
   { id: "newlook", name: "New Look", logo: "✨" },
