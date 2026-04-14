@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
-import heroBg from "@/assets/hero-bg.jpg";
+import heroBg from "@/assets/hero-bg.png";
 
 interface HeroProps {
   onBrowseClick: () => void;
@@ -9,7 +9,6 @@ interface HeroProps {
 const Hero = ({ onBrowseClick }: HeroProps) => {
   return (
     <section className="relative overflow-hidden">
-      {/* Background Image */}
       <img
         src={heroBg}
         alt=""
@@ -17,10 +16,9 @@ const Hero = ({ onBrowseClick }: HeroProps) => {
         width={1920}
         height={1080}
       />
-      {/* Dark Overlay */}
-      <div className="absolute inset-0 bg-foreground/80" />
+      {/* Dark gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-r from-foreground/90 via-foreground/80 to-foreground/70" />
 
-      {/* Content */}
       <div className="relative max-w-7xl mx-auto section-padding py-24 sm:py-32 lg:py-40 text-center">
         <p className="text-xs sm:text-sm font-semibold tracking-[0.3em] uppercase text-primary mb-4">
           Trusted Wholesale Partner
