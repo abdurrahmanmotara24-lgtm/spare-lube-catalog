@@ -1,11 +1,13 @@
 import { useState, useRef } from "react";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
+import TrustBar from "@/components/TrustBar";
 import BrandSection from "@/components/BrandSection";
 import ProductCatalog from "@/components/ProductCatalog";
 import WhyChoose from "@/components/WhyChoose";
 import ContactSection from "@/components/ContactSection";
 import Footer from "@/components/Footer";
+import WhatsAppFab from "@/components/WhatsAppFab";
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -32,6 +34,7 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Header searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       <Hero onBrowseClick={scrollToCatalog} />
+      <TrustBar />
       <BrandSection selectedBrand={selectedBrand} onBrandSelect={handleBrandSelect} />
       <div ref={catalogRef}>
         <ProductCatalog
@@ -46,6 +49,7 @@ const Index = () => {
       <WhyChoose />
       <ContactSection />
       <Footer />
+      <WhatsAppFab />
     </div>
   );
 };

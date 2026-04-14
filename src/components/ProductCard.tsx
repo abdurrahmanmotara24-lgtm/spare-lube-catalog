@@ -1,43 +1,41 @@
 import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Product } from "@/data/products";
+import { brands } from "@/data/products";
 
 interface ProductCardProps {
   product: Product;
 }
 
 const ProductCard = ({ product }: ProductCardProps) => {
-  const whatsappMessage = encodeURIComponent(`Hi, I would like a quote for ${product.name}`);
+  const whatsappMessage = encodeURIComponent(`Hi, I would like a quote for ${product.name} (${product.sizes.join(" / ")})`);
   const whatsappUrl = `https://wa.me/27000000000?text=${whatsappMessage}`;
+  const brandName = brands.find((b) => b.id === product.brand)?.name || "";
 
   return (
-    <div className="bg-card rounded-lg border border-border p-5 flex flex-col h-full transition-all duration-200 hover:shadow-lg hover:-translate-y-1">
+    <div className="bg-card rounded-xl border border-border p-4 flex flex-col h-full transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
       {/* Product Image Placeholder */}
-      <div className="bg-muted rounded-md flex items-center justify-center h-44 mb-5">
-        <div className="text-5xl opacity-20">🛢️</div>
+      <div className="bg-muted rounded-lg flex items-center justify-center h-32 sm:h-40 mb-4">
+        <div className="text-4xl opacity-20">🛢️</div>
       </div>
 
+      {/* Brand */}
+      <p className="text-[10px] sm:text-xs font-semibold text-primary uppercase tracking-wider mb-1">{brandName}</p>
+
       {/* Product Name */}
-      <h4 className="font-semibold text-foreground text-sm sm:text-base mb-3 leading-snug flex-1">
+      <h4 className="font-semibold text-foreground text-xs sm:text-sm mb-2 leading-snug flex-1">
         {product.name}
       </h4>
 
       {/* Sizes */}
-      <div className="flex flex-wrap gap-1.5 mb-5">
-        {product.sizes.map((size) => (
-          <span
-            key={size}
-            className="text-xs font-medium px-2.5 py-1 rounded-sm bg-muted text-muted-foreground"
-          >
-            {size}
-          </span>
-        ))}
-      </div>
+      <p className="text-xs text-muted-foreground mb-4">
+        {product.sizes.join(" / ")}
+      </p>
 
       {/* Get Quote Button */}
       <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="mt-auto">
-        <Button variant="quote" size="default">
-          <MessageCircle className="h-4 w-4" />
+        <Button variant="quote" size="sm" className="text-xs">
+          <MessageCircle className="h-3.5 w-3.5" />
           Get Quote
         </Button>
       </a>
