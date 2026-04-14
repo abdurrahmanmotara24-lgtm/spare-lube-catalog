@@ -13,7 +13,7 @@ interface ProductCatalogProps {
   onSizeChange: (size: string | null) => void;
 }
 
-const allSizes = ["1L", "4L", "5L", "20L", "208L", "200ml", "500ml", "0.4kg", "0.5kg", "18kg", "180kg", "25L"];
+const allSizes = ["200ml", "500ml", "1L", "5L"];
 
 const ProductCatalog = ({
   selectedBrand,

@@ -8,7 +8,8 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ product }: ProductCardProps) => {
-  const whatsappMessage = encodeURIComponent(`Hi, I would like a quote for ${product.name} (${product.sizes.join(" / ")})`);
+  const sizeText = product.sizes.length > 0 ? ` (${product.sizes.join(" / ")})` : "";
+  const whatsappMessage = encodeURIComponent(`Hi, I would like a quote for ${product.name}${sizeText}`);
   const whatsappUrl = `https://wa.me/27000000000?text=${whatsappMessage}`;
   const brandName = brands.find((b) => b.id === product.brand)?.name || "";
 
@@ -28,9 +29,11 @@ const ProductCard = ({ product }: ProductCardProps) => {
       </h4>
 
       {/* Sizes */}
-      <p className="text-xs text-muted-foreground mb-4">
-        {product.sizes.join(" / ")}
-      </p>
+      {product.sizes.length > 0 && (
+        <p className="text-xs text-muted-foreground mb-4">
+          {product.sizes.join(" / ")}
+        </p>
+      )}
 
       {/* Get Quote Button */}
       <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="mt-auto">
