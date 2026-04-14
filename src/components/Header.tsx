@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Search, MessageCircle, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import spareLubeLogo from "@/assets/spare-lube-logo.jpg";
 
 interface HeaderProps {
   searchQuery: string;
@@ -15,11 +16,12 @@ const Header = ({ searchQuery, onSearchChange }: HeaderProps) => {
       <div className="max-w-7xl mx-auto section-padding">
         <div className="flex items-center justify-between h-16 gap-4">
           {/* Logo */}
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">SL</span>
-            </div>
-            <span className="font-bold text-lg tracking-tight text-foreground">Spare Lube</span>
+          <div className="flex items-center shrink-0">
+            <img
+              src={spareLubeLogo}
+              alt="Spare Lube - Auto Lubricant Distributors"
+              className="h-12 sm:h-14 w-auto object-contain"
+            />
           </div>
 
           {/* Search - Desktop */}
