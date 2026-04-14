@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Search, MessageCircle, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import spareLubeLogo from "@/assets/spare-lube-logo.jpg";
 
 interface HeaderProps {
   searchQuery: string;
