@@ -39,6 +39,7 @@ export const brands: Brand[] = [
   { id: "shell", name: "Shell", logo: "🐚", image: shellLogo },
   { id: "castrol", name: "Castrol", logo: "🛢️", image: castrolLogo },
   { id: "engen", name: "Engen", logo: "⛽", image: engenLogo },
+  { id: "fuchs", name: "Fuchs", logo: "🔶", image: fuchsLogo },
   { id: "valvoline", name: "Valvoline", logo: "⚙️", image: valvolineLogo },
   { id: "motolube", name: "MOTOLUBE", logo: "🔧", image: motolubeLogo },
   { id: "winners", name: "Winners", logo: "🏆", image: winnersLogo },
