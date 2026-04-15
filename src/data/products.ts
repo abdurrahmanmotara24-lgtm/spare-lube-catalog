@@ -23,7 +23,7 @@ import fuchsLogo from "@/assets/brands/fuchs.png";
 import motolubeLogo from "@/assets/brands/motolube.jpg";
 import winnersLogo from "@/assets/brands/winners.jpg";
 import valvolineLogo from "@/assets/brands/valvoline.png";
-import g4Logo from "@/assets/brands/g4.jpg";
+import g4Logo from "@/assets/brands/g4.png";
 
 // Shell product images
 import shellHx5_5l from "@/assets/products/shell-hx5-5l.png";
@@ -59,7 +59,6 @@ export const products: Product[] = [
   { id: "s6", name: "Shell Helix HX3", brand: "shell", category: "Engine Oils", sizes: ["500ml"], image: shellHx3_500ml },
   { id: "s7", name: "Shell Helix HX8", brand: "shell", category: "Engine Oils", sizes: ["5L"], image: shellHx8_5l },
   { id: "s8", name: "Shell Helix HX8", brand: "shell", category: "Engine Oils", sizes: ["500ml"], image: shellHx8_5l },
-  { id: "s9", name: "Shell Helix HX8 Professional", brand: "shell", category: "Engine Oils", sizes: ["5L"], image: shellHx8_5l },
   { id: "s10", name: "Shell Rimula R4", brand: "shell", category: "Engine Oils", sizes: ["5L"], image: shellRimulaR4_5l },
 
   // Castrol
