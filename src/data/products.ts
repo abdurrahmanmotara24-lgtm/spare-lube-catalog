@@ -27,6 +27,7 @@ export const brands: Brand[] = [
   { id: "castrol", name: "Castrol", logo: "🛢️", image: castrolLogo },
   { id: "engen", name: "Engen", logo: "⛽", image: engenLogo },
   { id: "valvoline", name: "Valvoline", logo: "⚙️" },
+  { id: "motolube", name: "MOTOLUBE", logo: "🔧", image: motolubeLogo },
   { id: "winners", name: "Winners", logo: "🏆", image: winnersLogo },
   { id: "newlook", name: "New Look", logo: "🔵" },
   { id: "g4", name: "G4 Lubricants", logo: "🏭" },
@@ -67,6 +68,17 @@ export const products: Product[] = [
   { id: "v2", name: "Valvoline All Climate 15W-40", brand: "valvoline", category: "Engine Oils", sizes: ["5L"], image: "" },
   { id: "v3", name: "Valvoline SynPower 5W-30", brand: "valvoline", category: "Engine Oils", sizes: ["5L"], image: "" },
   { id: "v4", name: "Valvoline SynPower 10W-40", brand: "valvoline", category: "Engine Oils", sizes: ["5L"], image: "" },
+
+  // MOTOLUBE
+  { id: "m1", name: "Motolube EP90", brand: "motolube", category: "Transmission & Gear Oils", sizes: ["5L"], image: "" },
+  { id: "m2", name: "Motolube EP90", brand: "motolube", category: "Transmission & Gear Oils", sizes: ["500ml"], image: "" },
+  { id: "m3", name: "Motolube ATF", brand: "motolube", category: "Transmission & Gear Oils", sizes: ["5L"], image: "" },
+  { id: "m4", name: "Motolube ATF", brand: "motolube", category: "Transmission & Gear Oils", sizes: ["500ml"], image: "" },
+  { id: "m5", name: "Motolube ATW90", brand: "motolube", category: "Transmission & Gear Oils", sizes: ["5L"], image: "" },
+  { id: "m6", name: "Motolube ATW90", brand: "motolube", category: "Transmission & Gear Oils", sizes: ["500ml"], image: "" },
+  { id: "m7", name: "Motolube Hydraulic Oil", brand: "motolube", category: "Engine Oils", sizes: ["5L"], image: "" },
+  { id: "m8", name: "Motolube SAE 40", brand: "motolube", category: "Engine Oils", sizes: ["5L"], image: "" },
+  { id: "m9", name: "Motolube SAE 40", brand: "motolube", category: "Engine Oils", sizes: ["500ml"], image: "" },
 
   // Winners
   { id: "w1", name: "Winners Antifreeze Green", brand: "winners", category: "Antifreeze", sizes: ["1L"], image: "" },
