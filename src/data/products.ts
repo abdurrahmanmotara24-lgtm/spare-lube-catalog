@@ -14,6 +14,7 @@ export interface Brand {
   image?: string;
 }
 
+// Brand logos
 import shellLogo from "@/assets/brands/shell.png";
 import castrolLogo from "@/assets/brands/castrol.jpeg";
 import blixemLogo from "@/assets/brands/blixem.png";
@@ -21,32 +22,44 @@ import engenLogo from "@/assets/brands/engen.jpeg";
 import fuchsLogo from "@/assets/brands/fuchs.png";
 import motolubeLogo from "@/assets/brands/motolube.jpg";
 import winnersLogo from "@/assets/brands/winners.jpg";
+import valvolineLogo from "@/assets/brands/valvoline.png";
+import g4Logo from "@/assets/brands/g4.jpg";
+
+// Shell product images
+import shellHx5_5l from "@/assets/products/shell-hx5-5l.png";
+import shellHx5_500ml from "@/assets/products/shell-hx5-500ml.jpeg";
+import shellHx7_5l from "@/assets/products/shell-hx7-5l.webp";
+import shellHx7_500ml from "@/assets/products/shell-hx7-500ml.png";
+import shellHx3_5l from "@/assets/products/shell-hx3-5l.jpeg";
+import shellHx3_500ml from "@/assets/products/shell-hx3-500ml.webp";
+import shellHx8_5l from "@/assets/products/shell-hx8-5l.jpeg";
+import shellRimulaR4_5l from "@/assets/products/shell-rimula-r4-5l.jpeg";
 
 export const brands: Brand[] = [
   { id: "shell", name: "Shell", logo: "🐚", image: shellLogo },
   { id: "castrol", name: "Castrol", logo: "🛢️", image: castrolLogo },
   { id: "engen", name: "Engen", logo: "⛽", image: engenLogo },
-  { id: "valvoline", name: "Valvoline", logo: "⚙️" },
+  { id: "valvoline", name: "Valvoline", logo: "⚙️", image: valvolineLogo },
   { id: "motolube", name: "MOTOLUBE", logo: "🔧", image: motolubeLogo },
   { id: "winners", name: "Winners", logo: "🏆", image: winnersLogo },
   { id: "newlook", name: "New Look", logo: "🔵" },
-  { id: "g4", name: "G4 Lubricants", logo: "🏭" },
+  { id: "g4", name: "G4 Lubricants", logo: "🏭", image: g4Logo },
 ];
 
 export const categories = ["Engine Oils", "Antifreeze", "Brake Fluid", "Additives", "Transmission & Gear Oils"];
 
 export const products: Product[] = [
   // Shell
-  { id: "s1", name: "Shell Helix HX5", brand: "shell", category: "Engine Oils", sizes: ["5L"], image: "" },
-  { id: "s2", name: "Shell Helix HX5", brand: "shell", category: "Engine Oils", sizes: ["500ml"], image: "" },
-  { id: "s3", name: "Shell Helix HX7", brand: "shell", category: "Engine Oils", sizes: ["5L"], image: "" },
-  { id: "s4", name: "Shell Helix HX7", brand: "shell", category: "Engine Oils", sizes: ["500ml"], image: "" },
-  { id: "s5", name: "Shell Helix HX3", brand: "shell", category: "Engine Oils", sizes: ["5L"], image: "" },
-  { id: "s6", name: "Shell Helix HX3", brand: "shell", category: "Engine Oils", sizes: ["500ml"], image: "" },
-  { id: "s7", name: "Shell Helix HX8", brand: "shell", category: "Engine Oils", sizes: ["5L"], image: "" },
-  { id: "s8", name: "Shell Helix HX8", brand: "shell", category: "Engine Oils", sizes: ["500ml"], image: "" },
-  { id: "s9", name: "Shell Helix HX8 Professional", brand: "shell", category: "Engine Oils", sizes: ["5L"], image: "" },
-  { id: "s10", name: "Shell Rimula R4", brand: "shell", category: "Engine Oils", sizes: ["5L"], image: "" },
+  { id: "s1", name: "Shell Helix HX5", brand: "shell", category: "Engine Oils", sizes: ["5L"], image: shellHx5_5l },
+  { id: "s2", name: "Shell Helix HX5", brand: "shell", category: "Engine Oils", sizes: ["500ml"], image: shellHx5_500ml },
+  { id: "s3", name: "Shell Helix HX7", brand: "shell", category: "Engine Oils", sizes: ["5L"], image: shellHx7_5l },
+  { id: "s4", name: "Shell Helix HX7", brand: "shell", category: "Engine Oils", sizes: ["500ml"], image: shellHx7_500ml },
+  { id: "s5", name: "Shell Helix HX3", brand: "shell", category: "Engine Oils", sizes: ["5L"], image: shellHx3_5l },
+  { id: "s6", name: "Shell Helix HX3", brand: "shell", category: "Engine Oils", sizes: ["500ml"], image: shellHx3_500ml },
+  { id: "s7", name: "Shell Helix HX8", brand: "shell", category: "Engine Oils", sizes: ["5L"], image: shellHx8_5l },
+  { id: "s8", name: "Shell Helix HX8", brand: "shell", category: "Engine Oils", sizes: ["500ml"], image: shellHx8_5l },
+  { id: "s9", name: "Shell Helix HX8 Professional", brand: "shell", category: "Engine Oils", sizes: ["5L"], image: shellHx8_5l },
+  { id: "s10", name: "Shell Rimula R4", brand: "shell", category: "Engine Oils", sizes: ["5L"], image: shellRimulaR4_5l },
 
   // Castrol
   { id: "c1", name: "Castrol GTX 20W-50", brand: "castrol", category: "Engine Oils", sizes: ["5L"], image: "" },

@@ -15,9 +15,13 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
   return (
     <div className="bg-card rounded-xl border border-border p-4 flex flex-col h-full transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
-      {/* Product Image Placeholder */}
-      <div className="bg-muted rounded-lg flex items-center justify-center h-32 sm:h-40 mb-4">
-        <div className="text-4xl opacity-20">🛢️</div>
+      {/* Product Image */}
+      <div className="bg-muted rounded-lg flex items-center justify-center h-32 sm:h-40 mb-4 overflow-hidden">
+        {product.image ? (
+          <img src={product.image} alt={product.name} className="max-h-full max-w-full object-contain p-2" />
+        ) : (
+          <div className="text-4xl opacity-20">🛢️</div>
+        )}
       </div>
 
       {/* Brand */}
