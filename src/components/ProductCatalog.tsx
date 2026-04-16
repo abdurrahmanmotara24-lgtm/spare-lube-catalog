@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import ProductCard from "@/components/ProductCard";
-import { products, brands, categories } from "@/data/products";
+import { products as hardcodedProducts, brands, categories } from "@/data/products";
+import { useDbProducts } from "@/hooks/useDbProducts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search } from "lucide-react";
 
