@@ -112,12 +112,6 @@ const ProductCard = ({ product, isExpanded, onToggleExpand }: ProductCardProps) 
           style={{ maxHeight: isExpanded ? expandHeight : 0 }}
         >
           <div className="px-4 pb-4 border-t border-border pt-3">
-            {product.image && (
-              <div className="bg-muted rounded-lg flex items-center justify-center h-44 sm:h-56 mb-3 overflow-hidden">
-                <img src={product.image} alt={product.name} className="max-h-full max-w-full object-contain p-3" />
-              </div>
-            )}
-            <h5 className="font-semibold text-foreground text-sm mb-1">{product.name}</h5>
             {selectedSize && (
               <p className="text-xs text-primary font-medium mb-2">{selectedSize}</p>
             )}
