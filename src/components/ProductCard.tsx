@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { MessageCircle, Expand, X } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { MessageCircle, Expand, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,11 +11,21 @@ import { brands } from "@/data/products";
 
 interface ProductCardProps {
   product: Product;
+  isExpanded: boolean;
+  onToggleExpand: (id: string) => void;
 }
 
-const ProductCard = ({ product }: ProductCardProps) => {
+const ProductCard = ({ product, isExpanded, onToggleExpand }: ProductCardProps) => {
   const [selectedSize, setSelectedSize] = useState(product.sizes[0] || "");
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const expandRef = useRef<HTMLDivElement>(null);
+  const [expandHeight, setExpandHeight] = useState(0);
+
+  useEffect(() => {
+    if (expandRef.current) {
+      setExpandHeight(expandRef.current.scrollHeight);
+    }
+  }, [isExpanded, product.description]);
 
   const sizeText = selectedSize ? ` (${selectedSize})` : "";
   const whatsappMessage = encodeURIComponent(`Hi, I would like a quote for ${product.name}${sizeText}`);
@@ -24,64 +34,110 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
   return (
     <>
-      <div className="bg-card rounded-xl border border-border p-4 flex flex-col h-full transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
-        {/* Product Image with enlarge icon */}
-        <div className="relative bg-muted rounded-lg flex items-center justify-center h-32 sm:h-40 mb-4 overflow-hidden group">
-          {product.image ? (
-            <img src={product.image} alt={product.name} className="max-h-full max-w-full object-contain p-2" />
-          ) : (
-            <div className="text-4xl opacity-20">🛢️</div>
-          )}
-          {product.image && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setLightboxOpen(true);
-              }}
-              className="absolute top-2 right-2 p-1.5 rounded-md bg-background/70 backdrop-blur-sm text-foreground/70 hover:text-foreground hover:bg-background/90 transition-all opacity-60 sm:opacity-0 sm:group-hover:opacity-100"
-              aria-label="Enlarge image"
-            >
-              <Expand className="h-3.5 w-3.5" />
-            </button>
+      <div className="bg-card rounded-xl border border-border flex flex-col h-full transition-all duration-200 hover:shadow-lg overflow-hidden">
+        {/* Clickable card area */}
+        <div
+          className="p-4 flex flex-col flex-1 cursor-pointer"
+          onClick={() => onToggleExpand(product.id)}
+        >
+          {/* Product Image with enlarge icon */}
+          <div className="relative bg-muted rounded-lg flex items-center justify-center h-32 sm:h-40 mb-4 overflow-hidden group">
+            {product.image ? (
+              <img src={product.image} alt={product.name} className="max-h-full max-w-full object-contain p-2" />
+            ) : (
+              <div className="text-4xl opacity-20">🛢️</div>
+            )}
+            {product.image && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxOpen(true);
+                }}
+                className="absolute top-2 right-2 p-1.5 rounded-md bg-background/70 backdrop-blur-sm text-foreground/70 hover:text-foreground hover:bg-background/90 transition-all opacity-60 sm:opacity-0 sm:group-hover:opacity-100"
+                aria-label="Enlarge image"
+              >
+                <Expand className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Brand */}
+          <p className="text-[10px] sm:text-xs font-semibold text-primary uppercase tracking-wider mb-1">{brandName}</p>
+
+          {/* Product Name */}
+          <h4 className="font-semibold text-foreground text-xs sm:text-sm mb-2 leading-snug flex-1">
+            {product.name}
+          </h4>
+
+          {/* Size selector */}
+          {product.sizes.length > 1 ? (
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {product.sizes.map((size) => (
+                <button
+                  key={size}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedSize(size);
+                  }}
+                  className={`text-[10px] sm:text-xs px-2 py-1 rounded-md border transition-colors ${
+                    selectedSize === size
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-muted text-muted-foreground border-border hover:border-primary/50"
+                  }`}
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
+          ) : product.sizes.length === 1 ? (
+            <p className="text-xs text-muted-foreground mb-3">{product.sizes[0]}</p>
+          ) : null}
+
+          {/* Expand indicator */}
+          {product.description && (
+            <div className="flex items-center justify-center mt-1">
+              <ChevronDown
+                className={`h-4 w-4 text-muted-foreground transition-transform duration-300 ${
+                  isExpanded ? "rotate-180" : ""
+                }`}
+              />
+            </div>
           )}
         </div>
 
-        {/* Brand */}
-        <p className="text-[10px] sm:text-xs font-semibold text-primary uppercase tracking-wider mb-1">{brandName}</p>
-
-        {/* Product Name */}
-        <h4 className="font-semibold text-foreground text-xs sm:text-sm mb-2 leading-snug flex-1">
-          {product.name}
-        </h4>
-
-        {/* Size selector */}
-        {product.sizes.length > 1 ? (
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {product.sizes.map((size) => (
-              <button
-                key={size}
-                onClick={() => setSelectedSize(size)}
-                className={`text-[10px] sm:text-xs px-2 py-1 rounded-md border transition-colors ${
-                  selectedSize === size
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-muted text-muted-foreground border-border hover:border-primary/50"
-                }`}
-              >
-                {size}
-              </button>
-            ))}
+        {/* Expandable description section */}
+        <div
+          ref={expandRef}
+          className="transition-all duration-300 ease-in-out overflow-hidden"
+          style={{ maxHeight: isExpanded ? expandHeight : 0 }}
+        >
+          <div className="px-4 pb-4 border-t border-border pt-3">
+            {product.image && (
+              <div className="bg-muted rounded-lg flex items-center justify-center h-44 sm:h-56 mb-3 overflow-hidden">
+                <img src={product.image} alt={product.name} className="max-h-full max-w-full object-contain p-3" />
+              </div>
+            )}
+            <h5 className="font-semibold text-foreground text-sm mb-1">{product.name}</h5>
+            {selectedSize && (
+              <p className="text-xs text-primary font-medium mb-2">{selectedSize}</p>
+            )}
+            {product.description && (
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                {product.description}
+              </p>
+            )}
           </div>
-        ) : product.sizes.length === 1 ? (
-          <p className="text-xs text-muted-foreground mb-3">{product.sizes[0]}</p>
-        ) : null}
+        </div>
 
         {/* Get Quote Button */}
-        <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="mt-auto">
-          <Button variant="quote" size="sm" className="text-xs">
-            <MessageCircle className="h-3.5 w-3.5" />
-            Get Quote
-          </Button>
-        </a>
+        <div className="px-4 pb-4">
+          <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+            <Button variant="quote" size="sm" className="text-xs">
+              <MessageCircle className="h-3.5 w-3.5" />
+              Get Quote
+            </Button>
+          </a>
+        </div>
       </div>
 
       {/* Image Lightbox */}

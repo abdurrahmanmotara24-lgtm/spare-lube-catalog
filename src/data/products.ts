@@ -5,6 +5,7 @@ export interface Product {
   category: string;
   sizes: string[];
   image: string;
+  description?: string;
 }
 
 export interface Brand {

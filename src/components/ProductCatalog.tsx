@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import ProductCard from "@/components/ProductCard";
 import { products as hardcodedProducts, brands, categories } from "@/data/products";
 import { useDbProducts } from "@/hooks/useDbProducts";
@@ -26,7 +26,12 @@ const ProductCatalog = ({
 }: ProductCatalogProps) => {
   const [loading, setLoading] = useState(false);
   const [localSearch, setLocalSearch] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const { dbProducts } = useDbProducts();
+
+  const handleToggleExpand = useCallback((id: string) => {
+    setExpandedId((prev) => (prev === id ? null : id));
+  }, []);
 
   const allProducts = useMemo(() => [...hardcodedProducts, ...dbProducts], [dbProducts]);
 
@@ -150,7 +155,12 @@ const ProductCatalog = ({
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {prods.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  isExpanded={expandedId === product.id}
+                  onToggleExpand={handleToggleExpand}
+                />
               ))}
             </div>
           </div>
