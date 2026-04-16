@@ -26,6 +26,9 @@ const ProductCatalog = ({
 }: ProductCatalogProps) => {
   const [loading, setLoading] = useState(false);
   const [localSearch, setLocalSearch] = useState("");
+  const { dbProducts } = useDbProducts();
+
+  const allProducts = useMemo(() => [...hardcodedProducts, ...dbProducts], [dbProducts]);
 
   // Simulate loading on filter change
   useEffect(() => {
@@ -37,7 +40,7 @@ const ProductCatalog = ({
   const combinedSearch = searchQuery || localSearch;
 
   const filtered = useMemo(() => {
-    return products.filter((p) => {
+    return allProducts.filter((p) => {
       if (selectedBrand && p.brand !== selectedBrand) return false;
       if (selectedCategory && p.category !== selectedCategory) return false;
       if (selectedSize && !p.sizes.includes(selectedSize)) return false;
