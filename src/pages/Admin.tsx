@@ -9,9 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Trash2, Plus, LogOut, Upload, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
-import { categories } from "@/data/products";
 import { useDbBrands } from "@/hooks/useDbBrands";
+import { useDbCategories } from "@/hooks/useDbCategories";
 import BrandManager from "@/components/admin/BrandManager";
+import CategoryManager from "@/components/admin/CategoryManager";
 
 interface DbProduct {
   id: string;
@@ -28,6 +29,7 @@ const Admin = () => {
   const { user, loading, signOut } = useAuth();
   const { toast } = useToast();
   const { brands } = useDbBrands();
+  const { categories } = useDbCategories();
   const [products, setProducts] = useState<DbProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
 
@@ -141,6 +143,9 @@ const Admin = () => {
         {/* Brand Manager */}
         <BrandManager />
 
+        {/* Category Manager */}
+        <CategoryManager />
+
         {/* Add Product Form */}
         <div className="bg-card border border-border rounded-xl p-6 mb-10">
           <h2 className="font-heading text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
@@ -177,7 +182,7 @@ const Admin = () => {
               >
                 <option value="">Select category</option>
                 {categories.map((c) => (
-                  <option key={c} value={c}>{c}</option>
+                  <option key={c.id} value={c.name}>{c.name}</option>
                 ))}
               </select>
             </div>

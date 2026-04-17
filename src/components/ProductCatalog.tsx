@@ -1,8 +1,9 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import ProductCard from "@/components/ProductCard";
-import { products as hardcodedProducts, categories } from "@/data/products";
+import { products as hardcodedProducts } from "@/data/products";
 import { useDbProducts } from "@/hooks/useDbProducts";
 import { useDbBrands } from "@/hooks/useDbBrands";
+import { useDbCategories } from "@/hooks/useDbCategories";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search } from "lucide-react";
 
@@ -30,6 +31,7 @@ const ProductCatalog = ({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const { dbProducts } = useDbProducts();
   const { brands } = useDbBrands();
+  const { categories } = useDbCategories();
 
   const handleToggleExpand = useCallback((id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
@@ -98,7 +100,7 @@ const ProductCatalog = ({
         >
           <option value="">All Categories</option>
           {categories.map((cat) => (
-            <option key={cat} value={cat}>{cat}</option>
+            <option key={cat.id} value={cat.name}>{cat.name}</option>
           ))}
         </select>
 
