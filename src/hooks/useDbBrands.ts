@@ -26,7 +26,7 @@ export function useDbBrands() {
   useEffect(() => {
     fetchBrands();
     const channel = supabase
-      .channel("brands-changes")
+      .channel(`brands-changes-${crypto.randomUUID()}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "brands" }, () => {
         fetchBrands();
       })
