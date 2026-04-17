@@ -42,7 +42,18 @@ export const brands: Brand[] = [
   { id: "plexus", name: "Plexus", logo: "❄️", image: plexusLogo },
 ];
 
-export const categories = ["Engine Oils", "Antifreeze", "Brake Fluid", "Additives", "Transmission & Gear Oils"];
+export const categories = [
+  "Engine Oils",
+  "Antifreeze",
+  "Brake Fluid",
+  "Additives",
+  "Transmission & Gear Oils",
+  "Grease",
+  "Hand Cleaners",
+  "Degreasers",
+  "Fine Gel",
+  "Dishwashing Liquid",
+];
 
 // All products cleared — ready for admin uploads
 export const products: Product[] = [];
