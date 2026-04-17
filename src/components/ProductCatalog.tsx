@@ -1,7 +1,8 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import ProductCard from "@/components/ProductCard";
-import { products as hardcodedProducts, brands, categories } from "@/data/products";
+import { products as hardcodedProducts, categories } from "@/data/products";
 import { useDbProducts } from "@/hooks/useDbProducts";
+import { useDbBrands } from "@/hooks/useDbBrands";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search } from "lucide-react";
 
@@ -28,6 +29,7 @@ const ProductCatalog = ({
   const [localSearch, setLocalSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const { dbProducts } = useDbProducts();
+  const { brands } = useDbBrands();
 
   const handleToggleExpand = useCallback((id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
