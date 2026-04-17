@@ -9,7 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Trash2, Plus, LogOut, Upload, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
-import { brands, categories } from "@/data/products";
+import { categories } from "@/data/products";
+import { useDbBrands } from "@/hooks/useDbBrands";
+import BrandManager from "@/components/admin/BrandManager";
 
 interface DbProduct {
   id: string;
@@ -25,6 +27,7 @@ interface DbProduct {
 const Admin = () => {
   const { user, loading, signOut } = useAuth();
   const { toast } = useToast();
+  const { brands } = useDbBrands();
   const [products, setProducts] = useState<DbProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
 
@@ -135,6 +138,9 @@ const Admin = () => {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
+        {/* Brand Manager */}
+        <BrandManager />
+
         {/* Add Product Form */}
         <div className="bg-card border border-border rounded-xl p-6 mb-10">
           <h2 className="font-heading text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
