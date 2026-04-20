@@ -13,6 +13,7 @@ import { useDbBrands } from "@/hooks/useDbBrands";
 import { useDbCategories } from "@/hooks/useDbCategories";
 import BrandManager from "@/components/admin/BrandManager";
 import CategoryManager from "@/components/admin/CategoryManager";
+import DesignSettings from "@/components/admin/DesignSettings";
 
 interface DbProduct {
   id: string;
@@ -140,6 +141,9 @@ const Admin = () => {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
+        {/* Design Settings */}
+        <DesignSettings />
+
         {/* Brand Manager */}
         <BrandManager />
 
