@@ -1,15 +1,128 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useDbBrands, type DbBrand } from "@/hooks/useDbBrands";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash2, Plus, Upload, Pencil, X, Check } from "lucide-react";
+import { Trash2, Plus, Upload, Pencil, X, Check, GripVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+interface RowProps {
+  brand: DbBrand;
+  isEditing: boolean;
+  editName: string;
+  editLogo: string;
+  editImage: File | null;
+  onStartEdit: (b: DbBrand) => void;
+  onCancelEdit: () => void;
+  onSaveEdit: (id: string) => void;
+  onDelete: (id: string) => void;
+  setEditName: (v: string) => void;
+  setEditLogo: (v: string) => void;
+  setEditImage: (f: File | null) => void;
+}
+
+const SortableBrandRow = (p: RowProps) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: p.brand.id,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+  };
+  const b = p.brand;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="bg-background border border-border rounded-lg p-3 flex items-center gap-3"
+    >
+      <button
+        type="button"
+        className="cursor-grab active:cursor-grabbing touch-none p-1 text-muted-foreground hover:text-foreground"
+        aria-label="Drag to reorder"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <div className="h-12 w-12 rounded-md bg-muted flex items-center justify-center overflow-hidden shrink-0">
+        {b.image_url ? (
+          <img src={b.image_url} alt={b.name} className="max-h-full max-w-full object-contain" />
+        ) : (
+          <span className="text-xl">{b.logo || "🛢️"}</span>
+        )}
+      </div>
+      {p.isEditing ? (
+        <div className="flex-1 flex flex-wrap items-center gap-2">
+          <Input value={p.editName} onChange={(e) => p.setEditName(e.target.value)} className="w-40" placeholder="Name" />
+          <Input value={p.editLogo} onChange={(e) => p.setEditLogo(e.target.value)} className="w-20" placeholder="Emoji" />
+          <label className="flex items-center gap-1 cursor-pointer px-3 py-2 rounded-md border border-input bg-background text-xs hover:bg-muted">
+            <Upload className="h-3 w-3" />
+            <span className="truncate max-w-[100px]">{p.editImage ? p.editImage.name : "Replace image"}</span>
+            <input type="file" accept="image/*" className="hidden"
+              onChange={(e) => p.setEditImage(e.target.files?.[0] || null)} />
+          </label>
+          <Button size="icon" variant="default" onClick={() => p.onSaveEdit(b.id)}>
+            <Check className="h-4 w-4" />
+          </Button>
+          <Button size="icon" variant="ghost" onClick={p.onCancelEdit}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      ) : (
+        <>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-foreground text-sm truncate">{b.name}</p>
+            <p className="text-xs text-muted-foreground truncate">id: {b.id}</p>
+          </div>
+          <Button size="icon" variant="outline" onClick={() => p.onStartEdit(b)}>
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button size="icon" variant="destructive" onClick={() => p.onDelete(b.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </>
+      )}
+    </div>
+  );
+};
 
 const BrandManager = () => {
   const { toast } = useToast();
   const { brands, loading, refetch } = useDbBrands();
+
+  // Local ordering buffer for drag-and-drop
+  const [orderedIds, setOrderedIds] = useState<string[]>([]);
+  useEffect(() => {
+    setOrderedIds(brands.map((b) => b.id));
+  }, [brands]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   // Add form
   const [newId, setNewId] = useState("");
@@ -91,6 +204,37 @@ const BrandManager = () => {
     }
   };
 
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = orderedIds.indexOf(String(active.id));
+    const newIndex = orderedIds.indexOf(String(over.id));
+    if (oldIndex < 0 || newIndex < 0) return;
+
+    const next = arrayMove(orderedIds, oldIndex, newIndex);
+    setOrderedIds(next); // optimistic UI
+
+    // Persist new sort_order values (10, 20, 30, ...) for stable spacing
+    try {
+      const updates = next.map((id, i) =>
+        supabase.from("brands").update({ sort_order: (i + 1) * 10 }).eq("id", id),
+      );
+      const results = await Promise.all(updates);
+      const failed = results.find((r) => r.error);
+      if (failed?.error) throw failed.error;
+      toast({ title: "Order saved" });
+      refetch();
+    } catch (err: any) {
+      toast({ title: "Failed to save order", description: err.message, variant: "destructive" });
+      refetch();
+    }
+  };
+
+  // Build ordered brand list from local buffer
+  const brandsById = new Map(brands.map((b) => [b.id, b]));
+  const orderedBrands = orderedIds.map((id) => brandsById.get(id)).filter(Boolean) as DbBrand[];
+
   return (
     <div className="bg-card border border-border rounded-xl p-6 mb-10">
       <h2 className="font-heading text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
@@ -125,55 +269,35 @@ const BrandManager = () => {
         </div>
       </form>
 
-      {/* Brand list */}
-      <h3 className="font-semibold text-sm text-foreground mb-3">Existing Brands ({brands.length})</h3>
+      {/* Brand list with drag-and-drop */}
+      <h3 className="font-semibold text-sm text-foreground mb-1">Existing Brands ({brands.length})</h3>
+      <p className="text-xs text-muted-foreground mb-3">Drag the handle to reorder. Order is saved automatically.</p>
       {loading ? (
         <p className="text-muted-foreground text-sm">Loading...</p>
       ) : (
-        <div className="space-y-2">
-          {brands.map((b) => (
-            <div key={b.id} className="bg-background border border-border rounded-lg p-3 flex items-center gap-3">
-              <div className="h-12 w-12 rounded-md bg-muted flex items-center justify-center overflow-hidden shrink-0">
-                {b.image_url ? (
-                  <img src={b.image_url} alt={b.name} className="max-h-full max-w-full object-contain" />
-                ) : (
-                  <span className="text-xl">{b.logo || "🛢️"}</span>
-                )}
-              </div>
-              {editingId === b.id ? (
-                <div className="flex-1 flex flex-wrap items-center gap-2">
-                  <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="w-40" placeholder="Name" />
-                  <Input value={editLogo} onChange={(e) => setEditLogo(e.target.value)} className="w-20" placeholder="Emoji" />
-                  <label className="flex items-center gap-1 cursor-pointer px-3 py-2 rounded-md border border-input bg-background text-xs hover:bg-muted">
-                    <Upload className="h-3 w-3" />
-                    <span className="truncate max-w-[100px]">{editImage ? editImage.name : "Replace image"}</span>
-                    <input type="file" accept="image/*" className="hidden"
-                      onChange={(e) => setEditImage(e.target.files?.[0] || null)} />
-                  </label>
-                  <Button size="icon" variant="default" onClick={() => saveEdit(b.id)}>
-                    <Check className="h-4 w-4" />
-                  </Button>
-                  <Button size="icon" variant="ghost" onClick={() => setEditingId(null)}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-foreground text-sm truncate">{b.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">id: {b.id}</p>
-                  </div>
-                  <Button size="icon" variant="outline" onClick={() => startEdit(b)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button size="icon" variant="destructive" onClick={() => handleDelete(b.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </>
-              )}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={orderedIds} strategy={verticalListSortingStrategy}>
+            <div className="space-y-2">
+              {orderedBrands.map((b) => (
+                <SortableBrandRow
+                  key={b.id}
+                  brand={b}
+                  isEditing={editingId === b.id}
+                  editName={editName}
+                  editLogo={editLogo}
+                  editImage={editImage}
+                  onStartEdit={startEdit}
+                  onCancelEdit={() => setEditingId(null)}
+                  onSaveEdit={saveEdit}
+                  onDelete={handleDelete}
+                  setEditName={setEditName}
+                  setEditLogo={setEditLogo}
+                  setEditImage={setEditImage}
+                />
+              ))}
             </div>
-          ))}
-        </div>
+          </SortableContext>
+        </DndContext>
       )}
     </div>
   );
