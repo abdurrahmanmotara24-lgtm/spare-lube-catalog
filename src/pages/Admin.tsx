@@ -125,8 +125,6 @@ const Admin = () => {
       setImageFile(null);
       fetchProducts();
     }
-      fetchProducts();
-    }
     setSubmitting(false);
   };
 
@@ -137,6 +135,17 @@ const Admin = () => {
     } else {
       toast({ title: "Product deleted" });
       setProducts((prev) => prev.filter((p) => p.id !== id));
+    }
+  };
+
+  const saveProductSizes = async (id: string) => {
+    const { error } = await supabase.from("products").update({ sizes: editSizes }).eq("id", id);
+    if (error) {
+      toast({ title: "Error updating sizes", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Sizes updated" });
+      setEditingProductId(null);
+      fetchProducts();
     }
   };
 
