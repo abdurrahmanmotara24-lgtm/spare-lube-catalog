@@ -4,8 +4,9 @@ import { useDbBrands, type DbBrand } from "@/hooks/useDbBrands";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash2, Plus, Upload, Pencil, X, Check, GripVertical } from "lucide-react";
+import { Trash2, Plus, Upload, Pencil, X, Check, GripVertical, Palette } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { BRAND_THEME_SUGGESTIONS } from "@/lib/brandThemeSuggestions";
 import {
   DndContext,
   closestCenter,
@@ -35,6 +36,7 @@ interface RowProps {
   onCancelEdit: () => void;
   onSaveEdit: (id: string) => void;
   onDelete: (id: string) => void;
+  onApplyTheme: (id: string) => void;
   setEditName: (v: string) => void;
   setEditLogo: (v: string) => void;
   setEditImage: (f: File | null) => void;
@@ -95,7 +97,22 @@ const SortableBrandRow = (p: RowProps) => {
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-foreground text-sm truncate">{b.name}</p>
             <p className="text-xs text-muted-foreground truncate">id: {b.id}</p>
+            {BRAND_THEME_SUGGESTIONS[b.id] && (
+              <p className="text-[10px] text-muted-foreground mt-0.5 italic">
+                Theme suggestion: {BRAND_THEME_SUGGESTIONS[b.id].label}
+              </p>
+            )}
           </div>
+          {BRAND_THEME_SUGGESTIONS[b.id] && (
+            <Button
+              size="icon"
+              variant="outline"
+              title="Apply suggested theme to site"
+              onClick={() => p.onApplyTheme(b.id)}
+            >
+              <Palette className="h-4 w-4" />
+            </Button>
+          )}
           <Button size="icon" variant="outline" onClick={() => p.onStartEdit(b)}>
             <Pencil className="h-4 w-4" />
           </Button>
@@ -190,6 +207,26 @@ const BrandManager = () => {
       refetch();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleApplyTheme = async (brandId: string) => {
+    const suggestion = BRAND_THEME_SUGGESTIONS[brandId];
+    if (!suggestion) return;
+    if (!confirm(`Apply "${suggestion.label}" theme to the site? This updates global colors.`)) return;
+    const { error } = await supabase
+      .from("site_settings")
+      .update({
+        primary_color: suggestion.primary_color,
+        accent_color: suggestion.accent_color,
+        button_color: suggestion.button_color,
+        button_foreground_color: suggestion.button_foreground_color,
+      })
+      .eq("id", "main");
+    if (error) {
+      toast({ title: "Error applying theme", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Theme applied", description: suggestion.label });
     }
   };
 
@@ -290,6 +327,7 @@ const BrandManager = () => {
                   onCancelEdit={() => setEditingId(null)}
                   onSaveEdit={saveEdit}
                   onDelete={handleDelete}
+                  onApplyTheme={handleApplyTheme}
                   setEditName={setEditName}
                   setEditLogo={setEditLogo}
                   setEditImage={setEditImage}
