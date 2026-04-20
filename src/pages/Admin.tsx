@@ -104,16 +104,11 @@ const Admin = () => {
       image_url = urlData.publicUrl;
     }
 
-    const sizesArray = sizes
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-
     const { error } = await supabase.from("products").insert({
       name,
       brand,
       category,
-      sizes: sizesArray,
+      sizes: selectedSizes,
       description,
       image_url,
     });
@@ -125,9 +120,11 @@ const Admin = () => {
       setName("");
       setBrand("");
       setCategory("");
-      setSizes("");
+      setSelectedSizes([]);
       setDescription("");
       setImageFile(null);
+      fetchProducts();
+    }
       fetchProducts();
     }
     setSubmitting(false);
