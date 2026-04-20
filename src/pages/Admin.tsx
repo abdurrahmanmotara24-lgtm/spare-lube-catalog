@@ -176,6 +176,9 @@ const Admin = () => {
         {/* Category Manager */}
         <CategoryManager />
 
+        {/* Size Manager */}
+        <SizeManager />
+
         {/* Add Product Form */}
         <div className="bg-card border border-border rounded-xl p-6 mb-10">
           <h2 className="font-heading text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
@@ -216,9 +219,40 @@ const Admin = () => {
                 ))}
               </select>
             </div>
-            <div>
-              <Label htmlFor="sizes">Sizes (comma-separated)</Label>
-              <Input id="sizes" value={sizes} onChange={(e) => setSizes(e.target.value)} placeholder="e.g. 500ml, 1L, 5L" />
+            <div className="sm:col-span-2">
+              <Label>Sizes</Label>
+              {sizeLibrary.length === 0 ? (
+                <p className="text-xs text-muted-foreground mt-1">
+                  No sizes defined yet. Add some in the Manage Sizes section above.
+                </p>
+              ) : (
+                <>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {sizeLibrary.map((s) => {
+                      const checked = selectedSizes.includes(s.name);
+                      return (
+                        <button
+                          type="button"
+                          key={s.id}
+                          onClick={() => toggleSize(s.name, selectedSizes, setSelectedSizes)}
+                          className={`text-xs px-3 py-1.5 rounded-md border transition-colors ${
+                            checked
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background text-foreground border-input hover:border-primary/50"
+                          }`}
+                        >
+                          {s.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {selectedSizes.length > 1 && (
+                    <p className="text-[11px] text-muted-foreground mt-2">
+                      Selection order: {selectedSizes.join(" → ")}
+                    </p>
+                  )}
+                </>
+              )}
             </div>
             <div className="sm:col-span-2">
               <Label htmlFor="description">Description</Label>
