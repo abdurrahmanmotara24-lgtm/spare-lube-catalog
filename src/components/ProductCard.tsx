@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, Expand, ChevronDown } from "lucide-react";
+import { MessageCircle, Expand, ChevronDown, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -134,21 +134,160 @@ const ProductCard = ({ product, isExpanded, onToggleExpand }: ProductCardProps) 
         </div>
       </div>
 
-      {/* Image Lightbox */}
-      <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-        <DialogContent className="max-w-3xl bg-background/95 backdrop-blur-md border-border p-2 sm:p-4">
-          <DialogTitle className="sr-only">{product.name}</DialogTitle>
-          <div className="flex items-center justify-center min-h-[300px] sm:min-h-[400px]">
-            <img
-              src={product.image}
-              alt={product.name}
-              className="max-h-[70vh] max-w-full object-contain rounded-lg"
-            />
-          </div>
-          <p className="text-center text-sm font-medium text-foreground mt-2">{product.name}</p>
-        </DialogContent>
-      </Dialog>
+      {/* Image Lightbox with zoom & pan */}
+      <ZoomableLightbox
+        open={lightboxOpen}
+        onOpenChange={setLightboxOpen}
+        src={product.image}
+        alt={product.name}
+      />
     </>
+  );
+};
+
+interface ZoomableLightboxProps {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  src: string;
+  alt: string;
+}
+
+const ZoomableLightbox = ({ open, onOpenChange, src, alt }: ZoomableLightboxProps) => {
+  const [scale, setScale] = useState(1);
+  const [tx, setTx] = useState(0);
+  const [ty, setTy] = useState(0);
+  const dragRef = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
+  const pinchRef = useRef<{ dist: number; scale: number } | null>(null);
+
+  const reset = () => {
+    setScale(1);
+    setTx(0);
+    setTy(0);
+  };
+
+  useEffect(() => {
+    if (!open) reset();
+  }, [open]);
+
+  const clampScale = (s: number) => Math.min(5, Math.max(1, s));
+
+  const onWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = -e.deltaY * 0.002;
+    setScale((s) => {
+      const next = clampScale(s + delta);
+      if (next === 1) {
+        setTx(0);
+        setTy(0);
+      }
+      return next;
+    });
+  };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (scale <= 1) return;
+    (e.target as Element).setPointerCapture(e.pointerId);
+    dragRef.current = { x: e.clientX, y: e.clientY, tx, ty };
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!dragRef.current) return;
+    setTx(dragRef.current.tx + (e.clientX - dragRef.current.x));
+    setTy(dragRef.current.ty + (e.clientY - dragRef.current.y));
+  };
+
+  const onPointerUp = () => {
+    dragRef.current = null;
+  };
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      pinchRef.current = { dist: Math.hypot(dx, dy), scale };
+    }
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && pinchRef.current) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      const next = clampScale(pinchRef.current.scale * (dist / pinchRef.current.dist));
+      setScale(next);
+      if (next === 1) {
+        setTx(0);
+        setTy(0);
+      }
+    }
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (e.touches.length < 2) pinchRef.current = null;
+  };
+
+  const onDoubleClick = () => {
+    if (scale > 1) reset();
+    else setScale(2);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl bg-background/95 backdrop-blur-md border-border p-2 sm:p-4">
+        <DialogTitle className="sr-only">{alt}</DialogTitle>
+
+        {/* Zoom controls */}
+        <div className="absolute top-3 left-3 z-10 flex gap-1 bg-background/80 backdrop-blur-sm rounded-md border border-border p-1">
+          <button
+            onClick={() => setScale((s) => clampScale(s - 0.5))}
+            className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted text-foreground"
+            aria-label="Zoom out"
+          >
+            <ZoomOut className="h-4 w-4" />
+          </button>
+          <button
+            onClick={reset}
+            className="h-7 px-2 text-xs flex items-center justify-center rounded hover:bg-muted text-foreground tabular-nums"
+            aria-label="Reset zoom"
+          >
+            {Math.round(scale * 100)}%
+          </button>
+          <button
+            onClick={() => setScale((s) => clampScale(s + 0.5))}
+            className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted text-foreground"
+            aria-label="Zoom in"
+          >
+            <ZoomIn className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div
+          className="flex items-center justify-center min-h-[300px] sm:min-h-[500px] overflow-hidden select-none touch-none"
+          onWheel={onWheel}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onDoubleClick={onDoubleClick}
+          style={{ cursor: scale > 1 ? "grab" : "zoom-in" }}
+        >
+          <img
+            src={src}
+            alt={alt}
+            draggable={false}
+            className="max-h-[75vh] max-w-full object-contain rounded-lg transition-transform duration-100 ease-out"
+            style={{ transform: `translate(${tx}px, ${ty}px) scale(${scale})` }}
+          />
+        </div>
+        <p className="text-center text-sm font-medium text-foreground mt-2">{alt}</p>
+        <p className="text-center text-[11px] text-muted-foreground">
+          Scroll, pinch, or double-click to zoom · drag to pan
+        </p>
+      </DialogContent>
+    </Dialog>
   );
 };
 
