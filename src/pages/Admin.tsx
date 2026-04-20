@@ -11,8 +11,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { useDbBrands } from "@/hooks/useDbBrands";
 import { useDbCategories } from "@/hooks/useDbCategories";
+import { useDbSizes } from "@/hooks/useDbSizes";
 import BrandManager from "@/components/admin/BrandManager";
 import CategoryManager from "@/components/admin/CategoryManager";
+import SizeManager from "@/components/admin/SizeManager";
 import DesignSettings from "@/components/admin/DesignSettings";
 
 interface DbProduct {
@@ -31,6 +33,7 @@ const Admin = () => {
   const { toast } = useToast();
   const { brands } = useDbBrands();
   const { categories } = useDbCategories();
+  const { sizes: sizeLibrary } = useDbSizes();
   const [products, setProducts] = useState<DbProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
 
@@ -38,10 +41,27 @@ const Admin = () => {
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
   const [category, setCategory] = useState("");
-  const [sizes, setSizes] = useState("");
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [description, setDescription] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Edit state
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [editSizes, setEditSizes] = useState<string[]>([]);
+
+  const toggleSize = (s: string, list: string[], setter: (v: string[]) => void) => {
+    setter(list.includes(s) ? list.filter((x) => x !== s) : [...list, s]);
+  };
+
+  const moveSize = (s: string, dir: -1 | 1, list: string[], setter: (v: string[]) => void) => {
+    const i = list.indexOf(s);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= list.length) return;
+    const next = [...list];
+    [next[i], next[j]] = [next[j], next[i]];
+    setter(next);
+  };
 
   const fetchProducts = async () => {
     const { data, error } = await supabase
