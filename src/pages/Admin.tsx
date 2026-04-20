@@ -11,8 +11,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { useDbBrands } from "@/hooks/useDbBrands";
 import { useDbCategories } from "@/hooks/useDbCategories";
+import { useDbSizes } from "@/hooks/useDbSizes";
 import BrandManager from "@/components/admin/BrandManager";
 import CategoryManager from "@/components/admin/CategoryManager";
+import SizeManager from "@/components/admin/SizeManager";
 import DesignSettings from "@/components/admin/DesignSettings";
 
 interface DbProduct {
@@ -31,6 +33,7 @@ const Admin = () => {
   const { toast } = useToast();
   const { brands } = useDbBrands();
   const { categories } = useDbCategories();
+  const { sizes: sizeLibrary } = useDbSizes();
   const [products, setProducts] = useState<DbProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
 
@@ -38,10 +41,27 @@ const Admin = () => {
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
   const [category, setCategory] = useState("");
-  const [sizes, setSizes] = useState("");
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [description, setDescription] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Edit state
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [editSizes, setEditSizes] = useState<string[]>([]);
+
+  const toggleSize = (s: string, list: string[], setter: (v: string[]) => void) => {
+    setter(list.includes(s) ? list.filter((x) => x !== s) : [...list, s]);
+  };
+
+  const moveSize = (s: string, dir: -1 | 1, list: string[], setter: (v: string[]) => void) => {
+    const i = list.indexOf(s);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= list.length) return;
+    const next = [...list];
+    [next[i], next[j]] = [next[j], next[i]];
+    setter(next);
+  };
 
   const fetchProducts = async () => {
     const { data, error } = await supabase
@@ -84,16 +104,11 @@ const Admin = () => {
       image_url = urlData.publicUrl;
     }
 
-    const sizesArray = sizes
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-
     const { error } = await supabase.from("products").insert({
       name,
       brand,
       category,
-      sizes: sizesArray,
+      sizes: selectedSizes,
       description,
       image_url,
     });
@@ -105,7 +120,7 @@ const Admin = () => {
       setName("");
       setBrand("");
       setCategory("");
-      setSizes("");
+      setSelectedSizes([]);
       setDescription("");
       setImageFile(null);
       fetchProducts();
@@ -120,6 +135,17 @@ const Admin = () => {
     } else {
       toast({ title: "Product deleted" });
       setProducts((prev) => prev.filter((p) => p.id !== id));
+    }
+  };
+
+  const saveProductSizes = async (id: string) => {
+    const { error } = await supabase.from("products").update({ sizes: editSizes }).eq("id", id);
+    if (error) {
+      toast({ title: "Error updating sizes", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Sizes updated" });
+      setEditingProductId(null);
+      fetchProducts();
     }
   };
 
@@ -149,6 +175,9 @@ const Admin = () => {
 
         {/* Category Manager */}
         <CategoryManager />
+
+        {/* Size Manager */}
+        <SizeManager />
 
         {/* Add Product Form */}
         <div className="bg-card border border-border rounded-xl p-6 mb-10">
@@ -190,9 +219,40 @@ const Admin = () => {
                 ))}
               </select>
             </div>
-            <div>
-              <Label htmlFor="sizes">Sizes (comma-separated)</Label>
-              <Input id="sizes" value={sizes} onChange={(e) => setSizes(e.target.value)} placeholder="e.g. 500ml, 1L, 5L" />
+            <div className="sm:col-span-2">
+              <Label>Sizes</Label>
+              {sizeLibrary.length === 0 ? (
+                <p className="text-xs text-muted-foreground mt-1">
+                  No sizes defined yet. Add some in the Manage Sizes section above.
+                </p>
+              ) : (
+                <>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {sizeLibrary.map((s) => {
+                      const checked = selectedSizes.includes(s.name);
+                      return (
+                        <button
+                          type="button"
+                          key={s.id}
+                          onClick={() => toggleSize(s.name, selectedSizes, setSelectedSizes)}
+                          className={`text-xs px-3 py-1.5 rounded-md border transition-colors ${
+                            checked
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background text-foreground border-input hover:border-primary/50"
+                          }`}
+                        >
+                          {s.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {selectedSizes.length > 1 && (
+                    <p className="text-[11px] text-muted-foreground mt-2">
+                      Selection order: {selectedSizes.join(" → ")}
+                    </p>
+                  )}
+                </>
+              )}
             </div>
             <div className="sm:col-span-2">
               <Label htmlFor="description">Description</Label>
@@ -232,28 +292,105 @@ const Admin = () => {
           <p className="text-muted-foreground">No database products yet. Add one above.</p>
         ) : (
           <div className="space-y-3">
-            {products.map((product) => (
-              <div key={product.id} className="bg-card border border-border rounded-lg p-4 flex items-center gap-4">
-                {product.image_url ? (
-                  <img src={product.image_url} alt={product.name} className="h-16 w-16 rounded-md object-contain bg-muted" />
-                ) : (
-                  <div className="h-16 w-16 rounded-md bg-muted flex items-center justify-center text-2xl opacity-20">🛢️</div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-foreground text-sm truncate">{product.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {brands.find((b) => b.id === product.brand)?.name || product.brand} · {product.category}
-                    {product.sizes.length > 0 && ` · ${product.sizes.join(", ")}`}
-                  </p>
-                  {product.description && (
-                    <p className="text-xs text-muted-foreground mt-1 truncate">{product.description}</p>
+            {products.map((product) => {
+              const isEditing = editingProductId === product.id;
+              return (
+                <div key={product.id} className="bg-card border border-border rounded-lg p-4">
+                  <div className="flex items-start gap-4">
+                    {product.image_url ? (
+                      <img src={product.image_url} alt={product.name} className="h-16 w-16 rounded-md object-contain bg-muted shrink-0" />
+                    ) : (
+                      <div className="h-16 w-16 rounded-md bg-muted flex items-center justify-center text-2xl opacity-20 shrink-0">🛢️</div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-foreground text-sm truncate">{product.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {brands.find((b) => b.id === product.brand)?.name || product.brand} · {product.category}
+                        {product.sizes.length > 0 && ` · ${product.sizes.join(", ")}`}
+                      </p>
+                      {product.description && (
+                        <p className="text-xs text-muted-foreground mt-1 truncate">{product.description}</p>
+                      )}
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (isEditing) {
+                            setEditingProductId(null);
+                          } else {
+                            setEditingProductId(product.id);
+                            setEditSizes(product.sizes);
+                          }
+                        }}
+                      >
+                        {isEditing ? "Close" : "Sizes"}
+                      </Button>
+                      <Button variant="destructive" size="icon" onClick={() => handleDelete(product.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {isEditing && (
+                    <div className="mt-4 pt-4 border-t border-border">
+                      <p className="text-xs font-medium text-foreground mb-2">Assign sizes (click to toggle)</p>
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {sizeLibrary.map((s) => {
+                          const checked = editSizes.includes(s.name);
+                          return (
+                            <button
+                              type="button"
+                              key={s.id}
+                              onClick={() => toggleSize(s.name, editSizes, setEditSizes)}
+                              className={`text-xs px-3 py-1.5 rounded-md border transition-colors ${
+                                checked
+                                  ? "bg-primary text-primary-foreground border-primary"
+                                  : "bg-background text-foreground border-input hover:border-primary/50"
+                              }`}
+                            >
+                              {s.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {editSizes.length > 0 && (
+                        <>
+                          <p className="text-xs font-medium text-foreground mb-2">Display order</p>
+                          <div className="flex flex-wrap gap-2 mb-3">
+                            {editSizes.map((s) => (
+                              <div key={s} className="flex items-center gap-1 px-2 py-1 rounded-md border border-border bg-background text-xs">
+                                <span>{s}</span>
+                                <button
+                                  type="button"
+                                  className="text-muted-foreground hover:text-foreground px-1"
+                                  onClick={() => moveSize(s, -1, editSizes, setEditSizes)}
+                                  aria-label="Move up"
+                                >
+                                  ↑
+                                </button>
+                                <button
+                                  type="button"
+                                  className="text-muted-foreground hover:text-foreground px-1"
+                                  onClick={() => moveSize(s, 1, editSizes, setEditSizes)}
+                                  aria-label="Move down"
+                                >
+                                  ↓
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                      <Button size="sm" onClick={() => saveProductSizes(product.id)}>
+                        Save sizes
+                      </Button>
+                    </div>
                   )}
                 </div>
-                <Button variant="destructive" size="icon" onClick={() => handleDelete(product.id)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>
