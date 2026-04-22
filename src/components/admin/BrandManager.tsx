@@ -36,7 +36,7 @@ interface RowProps {
   onCancelEdit: () => void;
   onSaveEdit: (id: string) => void;
   onDelete: (id: string) => void;
-  onApplyTheme: (id: string) => void;
+  onPreviewTheme: (id: string) => void;
   setEditName: (v: string) => void;
   setEditLogo: (v: string) => void;
   setEditImage: (f: File | null) => void;
@@ -107,8 +107,8 @@ const SortableBrandRow = (p: RowProps) => {
             <Button
               size="icon"
               variant="outline"
-              title="Apply suggested theme to site"
-              onClick={() => p.onApplyTheme(b.id)}
+              title="Preview suggested theme on storefront by selecting this brand"
+              onClick={() => p.onPreviewTheme(b.id)}
             >
               <Palette className="h-4 w-4" />
             </Button>
@@ -210,24 +210,13 @@ const BrandManager = () => {
     }
   };
 
-  const handleApplyTheme = async (brandId: string) => {
+  const handlePreviewTheme = (brandId: string) => {
     const suggestion = BRAND_THEME_SUGGESTIONS[brandId];
     if (!suggestion) return;
-    if (!confirm(`Apply "${suggestion.label}" theme to the site? This updates global colors.`)) return;
-    const { error } = await supabase
-      .from("site_settings")
-      .update({
-        primary_color: suggestion.primary_color,
-        accent_color: suggestion.accent_color,
-        button_color: suggestion.button_color,
-        button_foreground_color: suggestion.button_foreground_color,
-      })
-      .eq("id", "main");
-    if (error) {
-      toast({ title: "Error applying theme", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Theme applied", description: suggestion.label });
-    }
+    toast({
+      title: "Brand theme preview",
+      description: `${suggestion.label}. Colors now switch automatically when that brand is selected on the homepage.`,
+    });
   };
 
   const handleDelete = async (id: string) => {
@@ -327,7 +316,7 @@ const BrandManager = () => {
                   onCancelEdit={() => setEditingId(null)}
                   onSaveEdit={saveEdit}
                   onDelete={handleDelete}
-                  onApplyTheme={handleApplyTheme}
+                  onPreviewTheme={handlePreviewTheme}
                   setEditName={setEditName}
                   setEditLogo={setEditLogo}
                   setEditImage={setEditImage}

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import TrustBar from "@/components/TrustBar";
@@ -8,14 +8,34 @@ import WhyChoose from "@/components/WhyChoose";
 import ContactSection from "@/components/ContactSection";
 import Footer from "@/components/Footer";
 import WhatsAppFab from "@/components/WhatsAppFab";
+import { BRAND_THEME_SUGGESTIONS } from "@/lib/brandThemeSuggestions";
+import { applyThemeToDocument, useSiteSettings } from "@/hooks/useSiteSettings";
 
 const Index = () => {
+  const { settings } = useSiteSettings();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
 
   const catalogRef = useRef<HTMLDivElement>(null);
+
+  const brandScopedTheme = useMemo(() => {
+    if (!selectedBrand) return settings;
+    const suggestion = BRAND_THEME_SUGGESTIONS[selectedBrand];
+    if (!suggestion) return settings;
+    return {
+      ...settings,
+      primary_color: suggestion.primary_color,
+      accent_color: suggestion.accent_color,
+      button_color: suggestion.button_color,
+      button_foreground_color: suggestion.button_foreground_color,
+    };
+  }, [selectedBrand, settings]);
+
+  useEffect(() => {
+    applyThemeToDocument(brandScopedTheme);
+  }, [brandScopedTheme]);
 
   const scrollToCatalog = () => {
     catalogRef.current?.scrollIntoView({ behavior: "smooth" });
