@@ -6,7 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Trash2, Plus, Upload, Pencil, X, Check, GripVertical, Palette } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { BRAND_THEME_SUGGESTIONS } from "@/lib/brandThemeSuggestions";
+import {
+  BRAND_THEME_SUGGESTIONS,
+  getBrandThemeSuggestion,
+  getStoredBrandThemeOverrides,
+  removeStoredBrandThemeOverride,
+  setStoredBrandThemeOverride,
+  type BrandThemeEditable,
+} from "@/lib/brandThemeSuggestions";
 import {
   DndContext,
   closestCenter,
@@ -29,17 +36,89 @@ import { CSS } from "@dnd-kit/utilities";
 interface RowProps {
   brand: DbBrand;
   isEditing: boolean;
+  isThemeEditing: boolean;
+  hasCustomTheme: boolean;
   editName: string;
   editLogo: string;
   editImage: File | null;
+  themeDraft: BrandThemeEditable;
   onStartEdit: (b: DbBrand) => void;
+  onStartThemeEdit: (b: DbBrand) => void;
   onCancelEdit: () => void;
+  onCancelThemeEdit: () => void;
   onSaveEdit: (id: string) => void;
+  onSaveTheme: (id: string) => void;
+  onResetTheme: (id: string) => void;
   onDelete: (id: string) => void;
   onPreviewTheme: (id: string) => void;
   setEditName: (v: string) => void;
   setEditLogo: (v: string) => void;
   setEditImage: (f: File | null) => void;
+  setThemeDraft: (v: BrandThemeEditable) => void;
+}
+
+function hslStringToHex(hsl: string): string {
+  const m = hsl.trim().match(/^([\d.]+)\s+([\d.]+)%\s+([\d.]+)%$/);
+  if (!m) return "#000000";
+  const h = parseFloat(m[1]);
+  const s = parseFloat(m[2]) / 100;
+  const l = parseFloat(m[3]) / 100;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m2 = l - c / 2;
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  if (h < 60) {
+    r = c;
+    g = x;
+  } else if (h < 120) {
+    r = x;
+    g = c;
+  } else if (h < 180) {
+    g = c;
+    b = x;
+  } else if (h < 240) {
+    g = x;
+    b = c;
+  } else if (h < 300) {
+    r = x;
+    b = c;
+  } else {
+    r = c;
+    b = x;
+  }
+  const to = (v: number) => Math.round((v + m2) * 255).toString(16).padStart(2, "0");
+  return `#${to(r)}${to(g)}${to(b)}`;
+}
+
+function hexToHslString(hex: string): string {
+  const v = hex.replace("#", "");
+  const r = parseInt(v.slice(0, 2), 16) / 255;
+  const g = parseInt(v.slice(2, 4), 16) / 255;
+  const b = parseInt(v.slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0);
+        break;
+      case g:
+        h = (b - r) / d + 2;
+        break;
+      default:
+        h = (r - g) / d + 4;
+        break;
+    }
+    h *= 60;
+  }
+  return `${Math.round(h)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }
 
 const SortableBrandRow = (p: RowProps) => {
@@ -102,17 +181,21 @@ const SortableBrandRow = (p: RowProps) => {
                 Theme suggestion: {BRAND_THEME_SUGGESTIONS[b.id].label}
               </p>
             )}
+            {p.hasCustomTheme && (
+              <p className="text-[10px] text-primary mt-0.5 font-medium">Custom theme saved</p>
+            )}
           </div>
-          {BRAND_THEME_SUGGESTIONS[b.id] && (
-            <Button
-              size="icon"
-              variant="outline"
-              title="Preview suggested theme on storefront by selecting this brand"
-              onClick={() => p.onPreviewTheme(b.id)}
-            >
-              <Palette className="h-4 w-4" />
-            </Button>
-          )}
+          <Button
+            size="icon"
+            variant="outline"
+            title="Preview active theme on storefront by selecting this brand"
+            onClick={() => p.onPreviewTheme(b.id)}
+          >
+            <Palette className="h-4 w-4" />
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => p.onStartThemeEdit(b)}>
+            Theme
+          </Button>
           <Button size="icon" variant="outline" onClick={() => p.onStartEdit(b)}>
             <Pencil className="h-4 w-4" />
           </Button>
@@ -120,6 +203,40 @@ const SortableBrandRow = (p: RowProps) => {
             <Trash2 className="h-4 w-4" />
           </Button>
         </>
+      )}
+      {p.isThemeEditing && (
+        <div className="w-full mt-3 pt-3 border-t border-border grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {([
+            ["primary_color", "Primary"],
+            ["accent_color", "Accent"],
+            ["button_color", "Button"],
+            ["button_foreground_color", "Button text"],
+          ] as const).map(([key, label]) => (
+            <div key={key} className="space-y-1">
+              <Label className="text-xs">{label}</Label>
+              <input
+                type="color"
+                value={hslStringToHex(p.themeDraft[key])}
+                onChange={(e) => p.setThemeDraft({ ...p.themeDraft, [key]: hexToHslString(e.target.value) })}
+                className="h-9 w-full rounded border border-input bg-background cursor-pointer"
+              />
+            </div>
+          ))}
+          <div className="sm:col-span-2 lg:col-span-4 flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => p.onSaveTheme(b.id)}>
+              Save Theme
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => p.onResetTheme(b.id)}>
+              Reset Theme
+            </Button>
+            <Button size="sm" variant="ghost" onClick={p.onCancelThemeEdit}>
+              Close
+            </Button>
+          </div>
+          <p className="sm:col-span-2 lg:col-span-4 text-[11px] text-muted-foreground">
+            Theme overrides are stored in this browser and applied when this brand is selected on the storefront.
+          </p>
+        </div>
       )}
     </div>
   );
@@ -153,6 +270,16 @@ const BrandManager = () => {
   const [editName, setEditName] = useState("");
   const [editLogo, setEditLogo] = useState("");
   const [editImage, setEditImage] = useState<File | null>(null);
+  const [themeEditingId, setThemeEditingId] = useState<string | null>(null);
+  const [themeDraft, setThemeDraft] = useState<BrandThemeEditable>({
+    primary_color: "0 85% 46%",
+    accent_color: "45 100% 51%",
+    button_color: "0 85% 46%",
+    button_foreground_color: "0 0% 100%",
+  });
+  const [themeOverrides, setThemeOverrides] = useState<Record<string, BrandThemeEditable>>(
+    () => getStoredBrandThemeOverrides(),
+  );
 
   const uploadLogo = async (file: File) => {
     const ext = file.name.split(".").pop();
@@ -196,6 +323,17 @@ const BrandManager = () => {
     setEditImage(null);
   };
 
+  const startThemeEdit = (b: DbBrand) => {
+    const suggestion = getBrandThemeSuggestion(b.id, b.name);
+    setThemeDraft({
+      primary_color: suggestion.primary_color,
+      accent_color: suggestion.accent_color,
+      button_color: suggestion.button_color,
+      button_foreground_color: suggestion.button_foreground_color,
+    });
+    setThemeEditingId(b.id);
+  };
+
   const saveEdit = async (id: string) => {
     try {
       const update: any = { name: editName, logo: editLogo };
@@ -211,12 +349,27 @@ const BrandManager = () => {
   };
 
   const handlePreviewTheme = (brandId: string) => {
-    const suggestion = BRAND_THEME_SUGGESTIONS[brandId];
-    if (!suggestion) return;
+    const brand = brands.find((b) => b.id === brandId);
+    const suggestion = getBrandThemeSuggestion(brandId, brand?.name);
     toast({
       title: "Brand theme preview",
       description: `${suggestion.label}. Colors now switch automatically when that brand is selected on the homepage.`,
     });
+  };
+
+  const handleSaveTheme = (brandId: string) => {
+    setStoredBrandThemeOverride(brandId, themeDraft);
+    setThemeOverrides(getStoredBrandThemeOverrides());
+    toast({ title: "Theme saved", description: "Brand colors updated for this browser." });
+    setThemeEditingId(null);
+  };
+
+  const handleResetTheme = (brandId: string) => {
+    removeStoredBrandThemeOverride(brandId);
+    setThemeOverrides(getStoredBrandThemeOverrides());
+    const brand = brands.find((b) => b.id === brandId);
+    if (brand) startThemeEdit(brand);
+    toast({ title: "Theme reset", description: "Brand colors reverted to suggested/auto palette." });
   };
 
   const handleDelete = async (id: string) => {
@@ -309,17 +462,25 @@ const BrandManager = () => {
                   key={b.id}
                   brand={b}
                   isEditing={editingId === b.id}
+                  isThemeEditing={themeEditingId === b.id}
+                  hasCustomTheme={Boolean(themeOverrides[b.id])}
                   editName={editName}
                   editLogo={editLogo}
                   editImage={editImage}
+                  themeDraft={themeDraft}
                   onStartEdit={startEdit}
+                  onStartThemeEdit={startThemeEdit}
                   onCancelEdit={() => setEditingId(null)}
+                  onCancelThemeEdit={() => setThemeEditingId(null)}
                   onSaveEdit={saveEdit}
+                  onSaveTheme={handleSaveTheme}
+                  onResetTheme={handleResetTheme}
                   onDelete={handleDelete}
                   onPreviewTheme={handlePreviewTheme}
                   setEditName={setEditName}
                   setEditLogo={setEditLogo}
                   setEditImage={setEditImage}
+                  setThemeDraft={setThemeDraft}
                 />
               ))}
             </div>

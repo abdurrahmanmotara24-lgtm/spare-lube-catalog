@@ -26,9 +26,9 @@ const Hero = ({ onBrowseClick }: HeroProps) => {
         className="absolute inset-0"
         style={{
           background: `linear-gradient(to right,
-            hsl(var(--foreground) / ${overlay}),
-            hsl(var(--foreground) / ${overlay * 0.94}),
-            hsl(var(--foreground) / ${overlay * 0.82}))`,
+            hsl(var(--hero-overlay-base) / ${overlay}),
+            hsl(var(--hero-overlay-base) / ${overlay * 0.94}),
+            hsl(var(--hero-overlay-base) / ${overlay * 0.82}))`,
         }}
       />
 
