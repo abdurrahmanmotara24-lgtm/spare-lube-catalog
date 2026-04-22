@@ -8,10 +8,10 @@ const items = [
 
 const TrustBar = () => {
   return (
-    <div className="bg-foreground">
+    <div className="bg-zinc-950">
       <div className="max-w-7xl mx-auto section-padding py-4 flex flex-wrap items-center justify-center gap-x-8 gap-y-2">
         {items.map((item, i) => (
-          <div key={i} className="flex items-center gap-2 text-primary-foreground/70 text-sm">
+          <div key={i} className="flex items-center gap-2 text-white/80 text-sm">
             <item.icon className="h-4 w-4 text-primary" />
             <span className="tracking-wide">{item.label}</span>
           </div>

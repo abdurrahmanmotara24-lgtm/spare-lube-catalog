@@ -16,7 +16,7 @@ export function useDbProducts() {
       if (data) {
         setDbProducts(
           data.map((p) => ({
-            id: `db-${p.id}`,
+            id: p.id,
             name: p.name,
             brand: p.brand,
             category: p.category,

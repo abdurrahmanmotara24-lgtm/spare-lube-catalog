@@ -4,6 +4,7 @@ import { products as hardcodedProducts } from "@/data/products";
 import { useDbProducts } from "@/hooks/useDbProducts";
 import { useDbBrands } from "@/hooks/useDbBrands";
 import { useDbCategories } from "@/hooks/useDbCategories";
+import { getBrandOrderRank } from "@/lib/productOrder";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search } from "lucide-react";
 
@@ -87,7 +88,7 @@ const ProductCatalog = ({
   ]);
 
   const filtered = useMemo(() => {
-    return allProducts.filter((p) => {
+    const base = allProducts.filter((p) => {
       if (selectedBrand && p.brand !== selectedBrand) return false;
       if (selectedCategory && p.category !== selectedCategory) return false;
       if (selectedSize && !p.sizes.includes(selectedSize)) return false;
@@ -101,6 +102,15 @@ const ProductCatalog = ({
         );
       }
       return true;
+    });
+
+    return base.sort((a, b) => {
+      if (a.brand === b.brand) {
+        const rankA = getBrandOrderRank(a.brand, a.id);
+        const rankB = getBrandOrderRank(b.brand, b.id);
+        if (rankA !== rankB) return rankA - rankB;
+      }
+      return a.name.localeCompare(b.name);
     });
   }, [selectedBrand, selectedCategory, selectedSize, combinedSearch, allProducts, brands]);
 

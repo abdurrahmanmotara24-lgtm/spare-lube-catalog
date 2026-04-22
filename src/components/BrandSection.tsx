@@ -28,8 +28,8 @@ const BrandSection = ({ selectedBrand, onBrandSelect }: BrandSectionProps) => {
                 className={`group flex flex-col items-center justify-center p-6 rounded-xl transition-all duration-200 cursor-pointer border
                   active:scale-[0.97]
                   ${selectedBrand === brand.id
-                    ? "bg-foreground text-primary-foreground border-foreground shadow-xl scale-[1.02] ring-2 ring-primary/40"
-                    : "bg-card border-border hover:shadow-lg hover:scale-[1.03]"
+                    ? "bg-primary text-primary-foreground border-primary shadow-xl scale-[1.02] ring-2 ring-primary/40"
+                    : "bg-card border-border hover:shadow-lg hover:scale-[1.03] hover:border-primary/30"
                   }`}
               >
                 <div className="w-full h-14 sm:h-16 flex items-center justify-center mb-3">

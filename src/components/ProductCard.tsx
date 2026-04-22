@@ -41,11 +41,11 @@ const ProductCard = ({ product, isExpanded, onToggleExpand }: ProductCardProps) 
           onClick={() => onToggleExpand(product.id)}
         >
           {/* Product Image with enlarge icon */}
-          <div className="relative bg-muted rounded-lg flex items-center justify-center h-32 sm:h-40 mb-4 overflow-hidden group">
+          <div className="relative rounded-lg flex items-center justify-center h-32 sm:h-40 mb-4 overflow-hidden group border border-border/60 bg-transparent">
             {product.image ? (
               <img src={product.image} alt={product.name} className="max-h-full max-w-full object-contain p-2" />
             ) : (
-              <div className="h-full w-full flex flex-col items-center justify-center gap-1 bg-gradient-to-br from-muted to-background">
+              <div className="h-full w-full flex flex-col items-center justify-center gap-1 bg-transparent">
                 <div className="text-xl font-semibold text-muted-foreground/80">
                   {product.name.slice(0, 2).toUpperCase()}
                 </div>

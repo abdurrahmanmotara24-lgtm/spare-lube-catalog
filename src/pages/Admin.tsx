@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2, Plus, LogOut, Upload, ArrowLeft } from "lucide-react";
+import { Trash2, Plus, LogOut, Upload, ArrowLeft, Pencil, ArrowUp, ArrowDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { useDbBrands } from "@/hooks/useDbBrands";
 import { useDbCategories } from "@/hooks/useDbCategories";
 import { useDbSizes } from "@/hooks/useDbSizes";
+import { getStoredBrandProductOrder, setStoredBrandProductOrder } from "@/lib/productOrder";
 import BrandManager from "@/components/admin/BrandManager";
 import CategoryManager from "@/components/admin/CategoryManager";
 import SizeManager from "@/components/admin/SizeManager";
@@ -46,9 +47,21 @@ const Admin = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Edit state
+  // Full product edit state
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editBrand, setEditBrand] = useState("");
+  const [editCategory, setEditCategory] = useState("");
   const [editSizes, setEditSizes] = useState<string[]>([]);
+  const [editDescription, setEditDescription] = useState("");
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [editImageUrl, setEditImageUrl] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  // Local per-brand product ordering
+  const [brandProductOrder, setBrandProductOrder] = useState<Record<string, string[]>>(
+    () => getStoredBrandProductOrder(),
+  );
 
   const toggleSize = (s: string, list: string[], setter: (v: string[]) => void) => {
     setter(list.includes(s) ? list.filter((x) => x !== s) : [...list, s]);
@@ -73,14 +86,27 @@ const Admin = () => {
         ...product,
         sizes: Array.isArray(product.sizes) ? product.sizes : [],
       }));
-      setProducts(normalized);
+      setProducts(applyStoredBrandOrder(normalized));
     }
     setLoadingProducts(false);
   };
 
+  const applyStoredBrandOrder = (list: DbProduct[]) => {
+    return [...list].sort((a, b) => {
+      if (a.brand !== b.brand) return 0;
+      const order = brandProductOrder[a.brand] || [];
+      const ai = order.indexOf(a.id);
+      const bi = order.indexOf(b.id);
+      if (ai === -1 && bi === -1) return b.created_at.localeCompare(a.created_at);
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
+  };
+
   useEffect(() => {
     if (user) fetchProducts();
-  }, [user]);
+  }, [user, brandProductOrder]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><p className="text-muted-foreground">Loading...</p></div>;
   if (!user) return <Navigate to="/login" replace />;
@@ -144,16 +170,72 @@ const Admin = () => {
     }
   };
 
-  const saveProductSizes = async (id: string) => {
-    const { error } = await supabase.from("products").update({ sizes: editSizes }).eq("id", id);
+  const startEditProduct = (product: DbProduct) => {
+    setEditingProductId(product.id);
+    setEditName(product.name);
+    setEditBrand(product.brand);
+    setEditCategory(product.category);
+    setEditSizes(Array.isArray(product.sizes) ? product.sizes : []);
+    setEditDescription(product.description || "");
+    setEditImageUrl(product.image_url || "");
+    setEditImageFile(null);
+  };
+
+  const saveProductEdit = async (id: string) => {
+    setSavingEdit(true);
+    let nextImageUrl = editImageUrl;
+    if (editImageFile) {
+      const ext = editImageFile.name.split(".").pop();
+      const path = `${crypto.randomUUID()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("product-images").upload(path, editImageFile);
+      if (uploadError) {
+        toast({ title: "Image upload failed", description: uploadError.message, variant: "destructive" });
+        setSavingEdit(false);
+        return;
+      }
+      nextImageUrl = supabase.storage.from("product-images").getPublicUrl(path).data.publicUrl;
+    }
+
+    const { error } = await supabase.from("products").update({
+      name: editName,
+      brand: editBrand,
+      category: editCategory,
+      sizes: editSizes,
+      description: editDescription,
+      image_url: nextImageUrl || null,
+    }).eq("id", id);
     if (error) {
-      toast({ title: "Error updating sizes", description: error.message, variant: "destructive" });
+      toast({ title: "Error updating product", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Sizes updated" });
+      toast({ title: "Product updated" });
       setEditingProductId(null);
       fetchProducts();
     }
+    setSavingEdit(false);
   };
+
+  const moveProductWithinBrand = (product: DbProduct, dir: -1 | 1) => {
+    const brandId = product.brand;
+    const inBrand = products.filter((p) => p.brand === brandId);
+    const ids = inBrand.map((p) => p.id);
+    const current = ids.indexOf(product.id);
+    const target = current + dir;
+    if (current < 0 || target < 0 || target >= ids.length) return;
+    const nextIds = [...ids];
+    [nextIds[current], nextIds[target]] = [nextIds[target], nextIds[current]];
+    const nextOrder = { ...brandProductOrder, [brandId]: nextIds };
+    setBrandProductOrder(nextOrder);
+    setStoredBrandProductOrder(nextOrder);
+  };
+
+  const groupedProducts = useMemo(() => {
+    const map: Record<string, DbProduct[]> = {};
+    products.forEach((p) => {
+      if (!map[p.brand]) map[p.brand] = [];
+      map[p.brand].push(p);
+    });
+    return map;
+  }, [products]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -297,17 +379,22 @@ const Admin = () => {
         ) : products.length === 0 ? (
           <p className="text-muted-foreground">No database products yet. Add one above.</p>
         ) : (
-          <div className="space-y-3">
-            {products.map((product) => {
+          <div className="space-y-6">
+            {Object.entries(groupedProducts).map(([brandId, items]) => (
+              <div key={brandId} className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">
+                  {brands.find((b) => b.id === brandId)?.name || brandId} ({items.length})
+                </h3>
+                {items.map((product, index) => {
               const isEditing = editingProductId === product.id;
               const productSizes = Array.isArray(product.sizes) ? product.sizes : [];
               return (
                 <div key={product.id} className="bg-card border border-border rounded-lg p-4">
                   <div className="flex items-start gap-4">
                     {product.image_url ? (
-                      <img src={product.image_url} alt={product.name} className="h-16 w-16 rounded-md object-contain bg-muted shrink-0" />
+                      <img src={product.image_url} alt={product.name} className="h-16 w-16 rounded-md object-contain shrink-0" />
                     ) : (
-                      <div className="h-16 w-16 rounded-md bg-muted flex items-center justify-center text-2xl opacity-20 shrink-0">🛢️</div>
+                      <div className="h-16 w-16 rounded-md border border-border flex items-center justify-center text-2xl opacity-30 shrink-0">🛢️</div>
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-foreground text-sm truncate">{product.name}</p>
@@ -319,7 +406,13 @@ const Admin = () => {
                         <p className="text-xs text-muted-foreground mt-1 truncate">{product.description}</p>
                       )}
                     </div>
-                    <div className="flex gap-2 shrink-0">
+                    <div className="flex gap-2 shrink-0 items-center">
+                      <Button variant="outline" size="icon" onClick={() => moveProductWithinBrand(product, -1)} disabled={index === 0}>
+                        <ArrowUp className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="icon" onClick={() => moveProductWithinBrand(product, 1)} disabled={index === items.length - 1}>
+                        <ArrowDown className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -327,12 +420,12 @@ const Admin = () => {
                           if (isEditing) {
                             setEditingProductId(null);
                           } else {
-                            setEditingProductId(product.id);
-                            setEditSizes(productSizes);
+                            startEditProduct(product);
                           }
                         }}
                       >
-                        {isEditing ? "Close" : "Sizes"}
+                        <Pencil className="h-4 w-4 mr-1" />
+                        {isEditing ? "Close" : "Edit"}
                       </Button>
                       <Button variant="destructive" size="icon" onClick={() => handleDelete(product.id)}>
                         <Trash2 className="h-4 w-4" />
@@ -342,6 +435,58 @@ const Admin = () => {
 
                   {isEditing && (
                     <div className="mt-4 pt-4 border-t border-border">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <Label className="text-xs">Product name</Label>
+                          <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Brand</Label>
+                          <select
+                            value={editBrand}
+                            onChange={(e) => setEditBrand(e.target.value)}
+                            className="w-full h-10 px-3 rounded-md border border-input bg-background text-foreground text-sm"
+                          >
+                            {brands.map((b) => (
+                              <option key={b.id} value={b.id}>{b.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Category</Label>
+                          <select
+                            value={editCategory}
+                            onChange={(e) => setEditCategory(e.target.value)}
+                            className="w-full h-10 px-3 rounded-md border border-input bg-background text-foreground text-sm"
+                          >
+                            {categories.map((c) => (
+                              <option key={c.id} value={c.name}>{c.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Image URL</Label>
+                          <Input value={editImageUrl} onChange={(e) => setEditImageUrl(e.target.value)} placeholder="https://..." />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <Label className="text-xs">Replace image file (optional)</Label>
+                          <label className="flex items-center gap-2 cursor-pointer px-4 py-2 rounded-md border border-input bg-background text-sm text-foreground hover:bg-muted transition-colors w-fit mt-1">
+                            <Upload className="h-4 w-4" />
+                            {editImageFile ? editImageFile.name : "Choose file"}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => setEditImageFile(e.target.files?.[0] || null)}
+                            />
+                          </label>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <Label className="text-xs">Description</Label>
+                          <Textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} rows={3} />
+                        </div>
+                      </div>
+
                       <p className="text-xs font-medium text-foreground mb-2">Assign sizes (click to toggle)</p>
                       <div className="flex flex-wrap gap-2 mb-3">
                         {sizeLibrary.map((s) => {
@@ -390,14 +535,21 @@ const Admin = () => {
                           </div>
                         </>
                       )}
-                      <Button size="sm" onClick={() => saveProductSizes(product.id)}>
-                        Save sizes
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={() => saveProductEdit(product.id)} disabled={savingEdit}>
+                          {savingEdit ? "Saving..." : "Save product"}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setEditingProductId(null)}>
+                          Cancel
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
               );
-            })}
+                })}
+              </div>
+            ))}
           </div>
         )}
       </main>
