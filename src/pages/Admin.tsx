@@ -22,7 +22,7 @@ interface DbProduct {
   name: string;
   brand: string;
   category: string;
-  sizes: string[];
+  sizes: string[] | null;
   description: string | null;
   image_url: string | null;
   created_at: string;
@@ -68,7 +68,13 @@ const Admin = () => {
       .from("products")
       .select("*")
       .order("created_at", { ascending: false });
-    if (!error && data) setProducts(data);
+    if (!error && data) {
+      const normalized = data.map((product) => ({
+        ...product,
+        sizes: Array.isArray(product.sizes) ? product.sizes : [],
+      }));
+      setProducts(normalized);
+    }
     setLoadingProducts(false);
   };
 
@@ -294,6 +300,7 @@ const Admin = () => {
           <div className="space-y-3">
             {products.map((product) => {
               const isEditing = editingProductId === product.id;
+              const productSizes = Array.isArray(product.sizes) ? product.sizes : [];
               return (
                 <div key={product.id} className="bg-card border border-border rounded-lg p-4">
                   <div className="flex items-start gap-4">
@@ -306,7 +313,7 @@ const Admin = () => {
                       <p className="font-semibold text-foreground text-sm truncate">{product.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {brands.find((b) => b.id === product.brand)?.name || product.brand} · {product.category}
-                        {product.sizes.length > 0 && ` · ${product.sizes.join(", ")}`}
+                        {productSizes.length > 0 && ` · ${productSizes.join(", ")}`}
                       </p>
                       {product.description && (
                         <p className="text-xs text-muted-foreground mt-1 truncate">{product.description}</p>
@@ -321,7 +328,7 @@ const Admin = () => {
                             setEditingProductId(null);
                           } else {
                             setEditingProductId(product.id);
-                            setEditSizes(product.sizes);
+                            setEditSizes(productSizes);
                           }
                         }}
                       >

@@ -24,7 +24,7 @@ export function useDbSizes() {
     fetchSizes();
 
     const channel = supabase
-      .channel("sizes-changes")
+      .channel(`sizes-changes-${crypto.randomUUID()}`)
       .on(
         "postgres_changes",
         {
@@ -44,5 +44,5 @@ export function useDbSizes() {
     };
   }, [fetchSizes]);
 
-  return { sizes, loading };
+  return { sizes, loading, refetch: fetchSizes };
 }
