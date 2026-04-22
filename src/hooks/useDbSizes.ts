@@ -21,25 +21,28 @@ export function useDbSizes() {
   }, []);
 
   useEffect(() => {
-  fetchSizes();
+    fetchSizes();
 
-  const channel = supabase
-    .channel("sizes-changes")
-    .on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: "sizes",
-      },
-      (payload) => {
-        console.log("Sizes updated:", payload);
-        fetchSizes();
-      }
-    )
-    .subscribe();
+    const channel = supabase
+      .channel("sizes-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "sizes",
+        },
+        (payload) => {
+          console.log("Sizes updated:", payload);
+          fetchSizes();
+        }
+      )
+      .subscribe();
 
-  return () => {
-    supabase.removeChannel(channel);
-  };
-}, [fetchSizes]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchSizes]);
+
+  return { sizes, loading };
+}
