@@ -12,6 +12,8 @@ interface ProductCatalogProps {
   selectedCategory: string | null;
   selectedSize: string | null;
   searchQuery: string;
+  onBrandChange: (brandId: string | null) => void;
+  onSearchChange: (query: string) => void;
   onCategoryChange: (cat: string | null) => void;
   onSizeChange: (size: string | null) => void;
 }
@@ -23,6 +25,8 @@ const ProductCatalog = ({
   selectedCategory,
   selectedSize,
   searchQuery,
+  onBrandChange,
+  onSearchChange,
   onCategoryChange,
   onSizeChange,
 }: ProductCatalogProps) => {
@@ -46,7 +50,41 @@ const ProductCatalog = ({
     return () => clearTimeout(t);
   }, [selectedBrand, selectedCategory, selectedSize]);
 
-  const combinedSearch = searchQuery || localSearch;
+  const combinedSearch = searchQuery.trim() || localSearch.trim();
+
+  const brandScopedProducts = useMemo(() => {
+    if (!selectedBrand) return allProducts;
+    return allProducts.filter((p) => p.brand === selectedBrand);
+  }, [allProducts, selectedBrand]);
+
+  const availableCategories = useMemo(() => {
+    return Array.from(new Set(brandScopedProducts.map((p) => p.category))).sort((a, b) =>
+      a.localeCompare(b),
+    );
+  }, [brandScopedProducts]);
+
+  const availableSizes = useMemo(() => {
+    return Array.from(new Set(brandScopedProducts.flatMap((p) => p.sizes))).sort((a, b) =>
+      a.localeCompare(b),
+    );
+  }, [brandScopedProducts]);
+
+  useEffect(() => {
+    if (selectedCategory && !availableCategories.includes(selectedCategory)) {
+      onCategoryChange(null);
+    }
+    if (selectedSize && !availableSizes.includes(selectedSize)) {
+      onSizeChange(null);
+    }
+  }, [
+    selectedBrand,
+    selectedCategory,
+    selectedSize,
+    availableCategories,
+    availableSizes,
+    onCategoryChange,
+    onSizeChange,
+  ]);
 
   const filtered = useMemo(() => {
     return allProducts.filter((p) => {
@@ -64,7 +102,7 @@ const ProductCatalog = ({
       }
       return true;
     });
-  }, [selectedBrand, selectedCategory, selectedSize, combinedSearch]);
+  }, [selectedBrand, selectedCategory, selectedSize, combinedSearch, allProducts, brands]);
 
   const grouped = useMemo(() => {
     const map: Record<string, typeof filtered> = {};
@@ -79,8 +117,40 @@ const ProductCatalog = ({
     ? brands.find((b) => b.id === selectedBrand)?.name
     : null;
 
+  const hasAnyFilter = Boolean(selectedBrand || selectedCategory || selectedSize || combinedSearch);
+  const emptyContext = [
+    brandName || null,
+    selectedCategory || null,
+    selectedSize || null,
+    combinedSearch ? `search "${combinedSearch}"` : null,
+  ]
+    .filter(Boolean)
+    .join(" + ");
+
+  const clearAllFilters = () => {
+    onBrandChange(null);
+    onCategoryChange(null);
+    onSizeChange(null);
+    setLocalSearch("");
+    onSearchChange("");
+  };
+
   return (
     <section className="max-w-7xl mx-auto section-padding py-16">
+      {brandName && (
+        <div className="mb-5 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 flex flex-wrap items-center gap-2">
+          <p className="text-sm font-medium text-foreground">
+            Active brand: <span className="text-primary">{brandName}</span>
+          </p>
+          <button
+            onClick={() => onBrandChange(null)}
+            className="text-xs font-semibold text-primary hover:underline"
+          >
+            Clear brand
+          </button>
+        </div>
+      )}
+
       {/* Search & Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-10">
         <div className="relative flex-1 max-w-sm">
@@ -99,9 +169,11 @@ const ProductCatalog = ({
           className="h-11 px-4 rounded-lg bg-muted text-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="">All Categories</option>
-          {categories.map((cat) => (
+          {categories
+            .filter((cat) => !selectedBrand || availableCategories.includes(cat.name))
+            .map((cat) => (
             <option key={cat.id} value={cat.name}>{cat.name}</option>
-          ))}
+            ))}
         </select>
 
         <select
@@ -110,23 +182,63 @@ const ProductCatalog = ({
           className="h-11 px-4 rounded-lg bg-muted text-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="">All Sizes</option>
-          {allSizes.map((size) => (
+          {(selectedBrand ? availableSizes : allSizes).map((size) => (
             <option key={size} value={size}>{size}</option>
           ))}
         </select>
 
-        {(selectedCategory || selectedSize || selectedBrand) && (
+        {hasAnyFilter && (
           <button
-            onClick={() => {
-              onCategoryChange(null);
-              onSizeChange(null);
-            }}
+            onClick={clearAllFilters}
             className="text-sm text-primary font-semibold hover:underline self-center"
           >
-            Clear filters
+            Clear all filters
           </button>
         )}
       </div>
+
+      {hasAnyFilter && (
+        <div className="mb-5 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            Active filters
+          </span>
+          {brandName && (
+            <button
+              onClick={() => onBrandChange(null)}
+              className="text-xs px-2.5 py-1 rounded-full border border-border bg-card hover:border-primary/40"
+            >
+              Brand: {brandName} ×
+            </button>
+          )}
+          {selectedCategory && (
+            <button
+              onClick={() => onCategoryChange(null)}
+              className="text-xs px-2.5 py-1 rounded-full border border-border bg-card hover:border-primary/40"
+            >
+              Category: {selectedCategory} ×
+            </button>
+          )}
+          {selectedSize && (
+            <button
+              onClick={() => onSizeChange(null)}
+              className="text-xs px-2.5 py-1 rounded-full border border-border bg-card hover:border-primary/40"
+            >
+              Size: {selectedSize} ×
+            </button>
+          )}
+          {combinedSearch && (
+            <button
+              onClick={() => {
+                setLocalSearch("");
+                onSearchChange("");
+              }}
+              className="text-xs px-2.5 py-1 rounded-full border border-border bg-card hover:border-primary/40"
+            >
+              Search: {combinedSearch} ×
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Title */}
       <h2 className="font-heading text-2xl sm:text-3xl font-bold text-foreground uppercase tracking-wide mb-2">
@@ -149,7 +261,15 @@ const ProductCatalog = ({
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-20 text-muted-foreground">
-          <p className="text-lg">No products found. Try adjusting your search.</p>
+          <p className="text-lg text-foreground mb-2">
+            No products found{emptyContext ? ` for ${emptyContext}` : "."}
+          </p>
+          <p className="text-sm mb-4">Try adjusting your filters or search terms.</p>
+          {hasAnyFilter && (
+            <button onClick={clearAllFilters} className="text-sm font-semibold text-primary hover:underline">
+              Clear all filters
+            </button>
+          )}
         </div>
       ) : (
         Object.entries(grouped).map(([category, prods]) => (

@@ -23,10 +23,12 @@ const BrandSection = ({ selectedBrand, onBrandSelect }: BrandSectionProps) => {
               <button
                 key={brand.id}
                 onClick={() => onBrandSelect(selectedBrand === brand.id ? null : brand.id)}
+                aria-pressed={selectedBrand === brand.id}
+                aria-label={`${brand.name}${selectedBrand === brand.id ? " selected" : ""}`}
                 className={`group flex flex-col items-center justify-center p-6 rounded-xl transition-all duration-200 cursor-pointer border
                   active:scale-[0.97]
                   ${selectedBrand === brand.id
-                    ? "bg-foreground text-primary-foreground border-foreground shadow-xl scale-[1.02]"
+                    ? "bg-foreground text-primary-foreground border-foreground shadow-xl scale-[1.02] ring-2 ring-primary/40"
                     : "bg-card border-border hover:shadow-lg hover:scale-[1.03]"
                   }`}
               >
@@ -48,6 +50,11 @@ const BrandSection = ({ selectedBrand, onBrandSelect }: BrandSectionProps) => {
                 >
                   {brand.name}
                 </span>
+                {selectedBrand === brand.id && (
+                  <span className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-primary-foreground/90">
+                    Selected
+                  </span>
+                )}
               </button>
             ))}
       </div>

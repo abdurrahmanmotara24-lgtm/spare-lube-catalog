@@ -62,6 +62,8 @@ const Index = () => {
           selectedCategory={selectedCategory}
           selectedSize={selectedSize}
           searchQuery={searchQuery}
+          onBrandChange={setSelectedBrand}
+          onSearchChange={setSearchQuery}
           onCategoryChange={setSelectedCategory}
           onSizeChange={setSelectedSize}
         />

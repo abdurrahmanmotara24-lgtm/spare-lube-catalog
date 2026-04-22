@@ -45,7 +45,12 @@ const ProductCard = ({ product, isExpanded, onToggleExpand }: ProductCardProps) 
             {product.image ? (
               <img src={product.image} alt={product.name} className="max-h-full max-w-full object-contain p-2" />
             ) : (
-              <div className="text-4xl opacity-20">🛢️</div>
+              <div className="h-full w-full flex flex-col items-center justify-center gap-1 bg-gradient-to-br from-muted to-background">
+                <div className="text-xl font-semibold text-muted-foreground/80">
+                  {product.name.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="text-[10px] text-muted-foreground">Image coming soon</div>
+              </div>
             )}
             {product.image && (
               <button
@@ -90,7 +95,7 @@ const ProductCard = ({ product, isExpanded, onToggleExpand }: ProductCardProps) 
               ))}
             </div>
           ) : product.sizes.length === 1 ? (
-            <p className="text-xs text-muted-foreground mb-3">{product.sizes[0]}</p>
+            <p className="text-xs text-muted-foreground mb-3">Size: {product.sizes[0]}</p>
           ) : null}
 
           {/* Expand indicator */}
@@ -128,7 +133,7 @@ const ProductCard = ({ product, isExpanded, onToggleExpand }: ProductCardProps) 
           <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
             <Button variant="quote" size="sm" className="text-xs">
               <MessageCircle className="h-3.5 w-3.5" />
-              Get Quote
+              Request Quote
             </Button>
           </a>
         </div>
