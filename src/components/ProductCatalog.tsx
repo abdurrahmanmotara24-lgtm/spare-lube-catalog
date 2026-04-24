@@ -166,8 +166,8 @@ const ProductCatalog = ({
       )}
 
       {/* Search & Filters */}
-      <div className="sticky top-16 z-20 bg-background/95 sm:backdrop-blur-sm -mx-2 px-2 py-2 rounded-lg border border-border/60 mb-8">
-        <div className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">
+      <div className="static sm:sticky sm:top-16 z-20 bg-background/95 sm:backdrop-blur-sm -mx-2 px-2 py-2 rounded-lg border border-border/60 mb-8">
+        <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.06em] sm:tracking-wider font-semibold text-muted-foreground mb-2">
           Find products
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
@@ -181,7 +181,7 @@ const ProductCatalog = ({
               onSearchChange(e.target.value);
               trackEvent("catalog_search_changed", { hasQuery: Boolean(e.target.value.trim()) });
             }}
-            className="w-full h-11 pl-10 pr-4 rounded-lg bg-muted text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            className="w-full h-11 pl-10 pr-4 rounded-lg bg-muted text-foreground placeholder:text-muted-foreground text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
         <select
@@ -191,7 +191,7 @@ const ProductCatalog = ({
             onCategoryChange(next);
             trackEvent("catalog_category_changed", { category: next || "all" });
           }}
-          className="h-11 px-4 rounded-lg bg-muted text-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring"
+          className="h-11 px-4 rounded-lg bg-muted text-foreground text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="">All Categories</option>
           {categories
@@ -208,7 +208,7 @@ const ProductCatalog = ({
             onSizeChange(next);
             trackEvent("catalog_size_changed", { size: next || "all" });
           }}
-          className="h-11 px-4 rounded-lg bg-muted text-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring"
+          className="h-11 px-4 rounded-lg bg-muted text-foreground text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="">All Sizes</option>
           {(selectedBrand ? availableSizes : allSizes).map((size) => (
@@ -219,7 +219,7 @@ const ProductCatalog = ({
         {hasAnyFilter && (
           <button
             onClick={clearAllFilters}
-            className="text-sm text-primary font-semibold hover:underline self-center min-h-11 px-2"
+            className="text-xs sm:text-sm text-primary font-semibold hover:underline self-center min-h-11 px-2"
           >
             Clear all filters
           </button>
@@ -280,10 +280,10 @@ const ProductCatalog = ({
       )}
 
       {/* Title */}
-      <h2 className="font-heading text-[1.35rem] sm:text-3xl font-bold text-foreground uppercase tracking-[0.01em] sm:tracking-wide mb-2">
+      <h2 className="font-heading text-[1.125rem] sm:text-3xl font-bold text-foreground uppercase tracking-[0.005em] sm:tracking-wide mb-2">
         {brandName ? `${brandName} Products` : "All Products"}
       </h2>
-      <p className="text-muted-foreground text-sm mb-10">
+      <p className="text-muted-foreground text-xs sm:text-sm mb-10">
         {filtered.length} product{filtered.length !== 1 ? "s" : ""} found
       </p>
 

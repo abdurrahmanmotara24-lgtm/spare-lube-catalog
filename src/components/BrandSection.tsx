@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useDbBrands } from "@/hooks/useDbBrands";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
@@ -21,7 +21,6 @@ const CAMERA_ADAPTIVE_SETTLE_FRAMES = 28;
 const CAMERA_ADAPTIVE_STABILIZE_MS = 0;
 const CAMERA_ADAPTIVE_MIN_STEP = 0.2;
 const CAMERA_SMOOTH_TIME_S = 0.4;
-const COARSE_POINTER_QUERY = "(max-width: 767px), (hover: none), (pointer: coarse)";
 
 const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: BrandSectionProps) => {
   const { brands, loading } = useDbBrands();
@@ -33,25 +32,12 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
   const scrollGuideRafRef = useRef<number | null>(null);
   const scrollGuideStartRef = useRef<number>(0);
   const scrollGuideTimerRef = useRef<number | null>(null);
-  const [isCoarseMobile, setIsCoarseMobile] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia(COARSE_POINTER_QUERY).matches : false,
-  );
-
   const selectedBrandData = useMemo(
     () => brands.find((brand) => brand.id === selectedBrand) || null,
     [brands, selectedBrand],
   );
   const shouldReduceMotion =
     typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mediaQuery = window.matchMedia(COARSE_POINTER_QUERY);
-    const syncDevice = () => setIsCoarseMobile(mediaQuery.matches);
-    syncDevice();
-    mediaQuery.addEventListener("change", syncDevice);
-    return () => mediaQuery.removeEventListener("change", syncDevice);
-  }, []);
 
   const stopScrollGuide = () => {
     if (scrollGuideTimerRef.current) window.clearTimeout(scrollGuideTimerRef.current);
@@ -89,11 +75,6 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
     scrollGuideTimerRef.current = window.setTimeout(() => {
       if (cancelledByUser) return;
       scrollGuideStartRef.current = performance.now();
-      const fixedDurationMs = isCoarseMobile ? 760 : CAMERA_GLIDE_MS;
-      const adaptiveMaxMs = isCoarseMobile ? 2600 : CAMERA_ADAPTIVE_MAX_MS;
-      const adaptiveSettleFrames = isCoarseMobile ? 12 : CAMERA_ADAPTIVE_SETTLE_FRAMES;
-      const adaptiveMinStep = isCoarseMobile ? 0.35 : CAMERA_ADAPTIVE_MIN_STEP;
-      const smoothTimeS = isCoarseMobile ? 0.3 : CAMERA_SMOOTH_TIME_S;
       if (mode === "fixed") {
         const node = resolveTarget();
         if (!node) return;
@@ -108,7 +89,7 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
 
         const animateFixed = (ts: number) => {
           if (cancelledByUser) return;
-          const p = Math.min(1, (ts - scrollGuideStartRef.current) / fixedDurationMs);
+          const p = Math.min(1, (ts - scrollGuideStartRef.current) / CAMERA_GLIDE_MS);
           const eased = easeInOutCubic(p);
           window.scrollTo({ top: from + delta * eased, left: 0, behavior: "auto" });
           if (p < 1) {
@@ -127,21 +108,11 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
       let stabilizedDesired: number | null = null;
       const adaptiveStartTs = performance.now();
       let lastTs = adaptiveStartTs;
-      let frameCounter = 0;
-
       const animateAdaptive = (ts: number) => {
         if (cancelledByUser) return;
-        frameCounter += 1;
-        const shouldSampleTarget = !isCoarseMobile || frameCounter % 2 === 0 || stabilizedDesired === null;
-        const node = shouldSampleTarget ? resolveTarget() : null;
+        const node = resolveTarget();
         if (!node) {
-          if (stabilizedDesired !== null) {
-            const current = window.scrollY;
-            const error = stabilizedDesired - current;
-            const step = Math.sign(error) * Math.min(Math.abs(error), adaptiveMinStep * 6);
-            window.scrollTo({ top: current + step, left: 0, behavior: "auto" });
-          }
-          if (ts - adaptiveStartTs <= adaptiveMaxMs) {
+          if (ts - adaptiveStartTs <= CAMERA_ADAPTIVE_MAX_MS) {
             scrollGuideRafRef.current = window.requestAnimationFrame(animateAdaptive);
           }
           return;
@@ -154,7 +125,7 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
         stabilizedDesired = desired;
 
         if (stabilizedDesired === null) {
-          if (ts - adaptiveStartTs <= adaptiveMaxMs) {
+          if (ts - adaptiveStartTs <= CAMERA_ADAPTIVE_MAX_MS) {
             scrollGuideRafRef.current = window.requestAnimationFrame(animateAdaptive);
           }
           return;
@@ -169,7 +140,7 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
         lastTs = ts;
 
         // SmoothDamp-style solver (prevents overshoot and kickoff jitter with moving targets).
-        const omega = 2 / smoothTimeS;
+        const omega = 2 / CAMERA_SMOOTH_TIME_S;
         const x = omega * dt;
         const exp = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
         const change = current - effectiveDesired;
@@ -178,8 +149,8 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
         let next = effectiveDesired + (change + temp) * exp;
 
         // Clamp tiny oscillations.
-        if (Math.abs(next - current) < adaptiveMinStep) {
-          next = current + Math.sign(effectiveDesired - current) * Math.min(adaptiveMinStep, Math.abs(effectiveDesired - current));
+        if (Math.abs(next - current) < CAMERA_ADAPTIVE_MIN_STEP) {
+          next = current + Math.sign(effectiveDesired - current) * Math.min(CAMERA_ADAPTIVE_MIN_STEP, Math.abs(effectiveDesired - current));
         }
 
         const maxScrollY2 = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
@@ -193,12 +164,12 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
           stableFrames = 0;
         }
 
-        if (stableFrames >= adaptiveSettleFrames) {
+        if (stableFrames >= CAMERA_ADAPTIVE_SETTLE_FRAMES) {
           cleanupUserListeners();
           return;
         }
 
-        if (ts - adaptiveStartTs > adaptiveMaxMs) {
+        if (ts - adaptiveStartTs > CAMERA_ADAPTIVE_MAX_MS) {
           cleanupUserListeners();
           return;
         }
@@ -231,7 +202,7 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
     return () => {
       stopFollow?.();
     };
-  }, [viewMode, isCoarseMobile, shouldReduceMotion]);
+  }, [viewMode, shouldReduceMotion]);
 
   useEffect(() => {
     if (shouldReduceMotion) return;
@@ -245,7 +216,7 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
       FOCUS_CAMERA_START_DELAY_MS,
       "fixed",
     );
-  }, [viewMode, selectedBrandData, isCoarseMobile, shouldReduceMotion]);
+  }, [viewMode, selectedBrandData, shouldReduceMotion]);
 
   const handleBrandClick = (brandId: string) => {
     const next = selectedBrand === brandId ? null : brandId;
@@ -265,7 +236,7 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
 
   return (
     <section ref={sectionRef} className="max-w-7xl mx-auto section-padding py-20">
-      <h2 className="font-heading text-[1.75rem] sm:text-4xl font-bold text-foreground text-center uppercase tracking-[0.01em] sm:tracking-wide mb-12">
+      <h2 className="font-heading text-[1.5rem] sm:text-4xl font-bold text-foreground text-center uppercase tracking-[0.005em] sm:tracking-wide mb-12">
         Browse by Brand
       </h2>
 
