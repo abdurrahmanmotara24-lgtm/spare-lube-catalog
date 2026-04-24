@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import TrustBar from "@/components/TrustBar";
@@ -8,10 +8,13 @@ import WhyChoose from "@/components/WhyChoose";
 import ContactSection from "@/components/ContactSection";
 import Footer from "@/components/Footer";
 import WhatsAppFab from "@/components/WhatsAppFab";
+import { getBrandThemeSuggestion } from "@/lib/brandThemeSuggestions";
 import { applyThemeToDocument, useSiteSettings } from "@/hooks/useSiteSettings";
+import { useDbBrands } from "@/hooks/useDbBrands";
 
 const Index = () => {
   const { settings } = useSiteSettings();
+  const { brands } = useDbBrands();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
   const [brandViewMode, setBrandViewMode] = useState<"grid" | "brandFocused">("grid");
@@ -27,9 +30,22 @@ const Index = () => {
 
   const catalogRef = useRef<HTMLDivElement>(null);
 
+  const brandScopedTheme = useMemo(() => {
+    if (!selectedBrand) return settings;
+    const selectedBrandName = brands.find((brand) => brand.id === selectedBrand)?.name;
+    const suggestion = getBrandThemeSuggestion(selectedBrand, selectedBrandName);
+    return {
+      ...settings,
+      primary_color: suggestion.primary_color,
+      accent_color: suggestion.accent_color,
+      button_color: suggestion.button_color,
+      button_foreground_color: suggestion.button_foreground_color,
+    };
+  }, [selectedBrand, settings, brands]);
+
   useEffect(() => {
-    applyThemeToDocument(settings);
-  }, [settings]);
+    applyThemeToDocument(brandScopedTheme);
+  }, [brandScopedTheme]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -71,7 +87,7 @@ const Index = () => {
     root.style.setProperty("--border", "0 0% 18%");
     root.style.setProperty("--input", "0 0% 18%");
     root.style.setProperty("--hero-overlay-base", "0 0% 0%");
-  }, [isDarkMode, settings]);
+  }, [isDarkMode, brandScopedTheme]);
 
   const scrollToCatalog = () => {
     catalogRef.current?.scrollIntoView({ behavior: "smooth" });
