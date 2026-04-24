@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2, Plus, LogOut, Upload, ArrowLeft, Pencil, ArrowUp, ArrowDown } from "lucide-react";
+import { Trash2, Plus, LogOut, Upload, ArrowLeft, Pencil, ArrowUp, ArrowDown, GripVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { useDbBrands } from "@/hooks/useDbBrands";
@@ -58,6 +58,8 @@ const Admin = () => {
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editImageUrl, setEditImageUrl] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+  const [draggingProductId, setDraggingProductId] = useState<string | null>(null);
+  const [draggingBrandId, setDraggingBrandId] = useState<string | null>(null);
 
   // Local per-brand product ordering
   const [brandProductOrder, setBrandProductOrder] = useState<Record<string, string[]>>(
@@ -227,6 +229,21 @@ const Admin = () => {
     setStoredBrandProductOrder(nextOrder);
   };
 
+  const reorderProductsByDrag = (brandId: string, draggedId: string, targetId: string) => {
+    if (draggedId === targetId) return;
+    const inBrand = products.filter((p) => p.brand === brandId);
+    const ids = inBrand.map((p) => p.id);
+    const from = ids.indexOf(draggedId);
+    if (from < 0) return;
+    const withoutDragged = ids.filter((id) => id !== draggedId);
+    const targetIndex = withoutDragged.indexOf(targetId);
+    if (targetIndex < 0) return;
+    withoutDragged.splice(targetIndex, 0, draggedId);
+    const nextOrder = { ...brandProductOrder, [brandId]: withoutDragged };
+    setBrandProductOrder(nextOrder);
+    setStoredBrandProductOrder(nextOrder);
+  };
+
   const groupedProducts = useMemo(() => {
     const map: Record<string, DbProduct[]> = {};
     products.forEach((p) => {
@@ -391,8 +408,45 @@ const Admin = () => {
               const isEditing = editingProductId === product.id;
               const productSizes = Array.isArray(product.sizes) ? product.sizes : [];
               return (
-                <div key={product.id} className="bg-card border border-border rounded-lg p-4">
+                <div
+                  key={product.id}
+                  className={`bg-card border rounded-lg p-4 transition-colors ${
+                    draggingProductId === product.id
+                      ? "border-primary/60 opacity-80"
+                      : "border-border"
+                  }`}
+                  draggable={!isEditing}
+                  onDragStart={(e) => {
+                    if (isEditing) return;
+                    setDraggingProductId(product.id);
+                    setDraggingBrandId(product.brand);
+                    e.dataTransfer.effectAllowed = "move";
+                    e.dataTransfer.setData("text/plain", product.id);
+                  }}
+                  onDragOver={(e) => {
+                    if (!draggingProductId || !draggingBrandId) return;
+                    if (draggingBrandId !== product.brand) return;
+                    if (draggingProductId === product.id) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (!draggingProductId || !draggingBrandId) return;
+                    if (draggingBrandId !== product.brand) return;
+                    reorderProductsByDrag(product.brand, draggingProductId, product.id);
+                    setDraggingProductId(null);
+                    setDraggingBrandId(null);
+                  }}
+                  onDragEnd={() => {
+                    setDraggingProductId(null);
+                    setDraggingBrandId(null);
+                  }}
+                >
                   <div className="flex items-start gap-4">
+                    <div className="pt-1 text-muted-foreground" title="Drag to reorder within this brand">
+                      <GripVertical className="h-4 w-4" />
+                    </div>
                     {product.image_url ? (
                       <img src={product.image_url} alt={product.name} className="h-16 w-16 rounded-md object-contain shrink-0" />
                     ) : (

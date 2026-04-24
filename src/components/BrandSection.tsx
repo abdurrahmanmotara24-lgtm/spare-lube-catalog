@@ -14,7 +14,7 @@ const FOCUS_CAMERA_START_DELAY_MS = 120;
 const RETURN_CAMERA_START_DELAY_MS = 120;
 const CAMERA_GLIDE_MS = 950;
 const CAMERA_EASE = [0.22, 1, 0.36, 1] as const;
-const CAMERA_ADAPTIVE_MAX_MS = 4200;
+const CAMERA_ADAPTIVE_MAX_MS = 5200;
 const CAMERA_ADAPTIVE_SETTLE_PX = 0.5;
 const CAMERA_ADAPTIVE_SETTLE_FRAMES = 28;
 const CAMERA_ADAPTIVE_STABILIZE_MS = 0;
@@ -80,31 +80,21 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
       const adaptiveStartTs = performance.now();
       let lastTs = adaptiveStartTs;
 
-      // Fallback anchor ensures continuous target at kickoff before tile is fully measurable.
-      const fallbackNode = sectionRef.current;
-      if (fallbackNode) {
-        const rect = fallbackNode.getBoundingClientRect();
+      const animateAdaptive = (ts: number) => {
+        const node = resolveTarget();
+        if (!node) {
+          if (ts - adaptiveStartTs <= CAMERA_ADAPTIVE_MAX_MS) {
+            scrollGuideRafRef.current = window.requestAnimationFrame(animateAdaptive);
+          }
+          return;
+        }
+        const rect = node.getBoundingClientRect();
         const targetCenterY = rect.top + rect.height / 2;
         const viewportCenterY = window.innerHeight / 2;
         const maxScrollY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-        const fallbackDesired = Math.min(maxScrollY, Math.max(0, window.scrollY + (targetCenterY - viewportCenterY)));
-        stabilizedDesired = fallbackDesired;
-      }
+        const desired = Math.min(maxScrollY, Math.max(0, window.scrollY + (targetCenterY - viewportCenterY)));
+        stabilizedDesired = desired;
 
-      const animateAdaptive = (ts: number) => {
-        const node = resolveTarget();
-        if (node) {
-          const rect = node.getBoundingClientRect();
-          const targetCenterY = rect.top + rect.height / 2;
-          const viewportCenterY = window.innerHeight / 2;
-          const maxScrollY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-          const desired = Math.min(maxScrollY, Math.max(0, window.scrollY + (targetCenterY - viewportCenterY)));
-          // Keep a smoothed live target (not frozen) to avoid kickoff jitter and still follow to the end.
-          stabilizedDesired =
-            stabilizedDesired === null
-              ? desired
-              : stabilizedDesired * 0.84 + desired * 0.16;
-        }
         if (stabilizedDesired === null) {
           if (ts - adaptiveStartTs <= CAMERA_ADAPTIVE_MAX_MS) {
             scrollGuideRafRef.current = window.requestAnimationFrame(animateAdaptive);
@@ -169,9 +159,12 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
     const returningBrandId = lastFocusedBrandRef.current;
     if (!returningBrandId) return;
     const stopFollow = startCameraFollow(
-      () => sectionRef.current?.querySelector<HTMLElement>(`[data-brand-id="${returningBrandId}"]`) || null,
+      () =>
+        sectionRef.current?.querySelector<HTMLElement>(
+          `[data-brand-id="${returningBrandId}"][data-brand-role="grid-tile"]`,
+        ) || null,
       RETURN_CAMERA_START_DELAY_MS,
-      "fixed",
+      "adaptive",
     );
 
     return () => {
@@ -229,7 +222,6 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
                   return (
                     <div
                       key={`${brand.id}-placeholder`}
-                      data-brand-id={brand.id}
                       className="p-6 rounded-xl border border-transparent opacity-0 pointer-events-none"
                       aria-hidden="true"
                     >
@@ -244,6 +236,7 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
                     layout
                     layoutId={`brand-tile-${brand.id}`}
                     data-brand-id={brand.id}
+                    data-brand-role="grid-tile"
                     onClick={() => handleBrandClick(brand.id)}
                     aria-pressed={selectedBrand === brand.id}
                     aria-label={`${brand.name}${selectedBrand === brand.id ? " selected" : ""}`}
@@ -325,6 +318,7 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
             >
               <motion.button
                 layoutId={`brand-tile-${selectedBrandData.id}`}
+                data-brand-role="focus-tile"
                 onClick={() => handleBrandClick(selectedBrandData.id)}
                 aria-pressed
                 aria-label={`${selectedBrandData.name} selected`}

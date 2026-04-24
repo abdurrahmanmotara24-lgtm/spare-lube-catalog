@@ -56,7 +56,22 @@ const Header = ({ searchQuery, onSearchChange, isDarkMode, onToggleDarkMode }: H
               title={isDarkMode ? "Light mode" : "Dark mode"}
               className="hidden sm:inline-flex"
             >
-              {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              <span className="relative h-4 w-4">
+                <Sun
+                  className={`absolute inset-0 h-4 w-4 transition-all duration-500 ease-out ${
+                    isDarkMode
+                      ? "rotate-0 scale-100 opacity-100"
+                      : "rotate-90 scale-0 opacity-0"
+                  }`}
+                />
+                <Moon
+                  className={`absolute inset-0 h-4 w-4 transition-all duration-500 ease-out ${
+                    isDarkMode
+                      ? "-rotate-90 scale-0 opacity-0"
+                      : "rotate-0 scale-100 opacity-100"
+                  }`}
+                />
+              </span>
             </Button>
             <a
               href="https://wa.me/27000000000?text=Hi%2C%20I%20would%20like%20to%20enquire%20about%20your%20products"
@@ -94,7 +109,22 @@ const Header = ({ searchQuery, onSearchChange, isDarkMode, onToggleDarkMode }: H
               />
             </div>
             <Button variant="outline" size="sm" onClick={onToggleDarkMode} className="w-full">
-              {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              <span className="relative h-4 w-4">
+                <Sun
+                  className={`absolute inset-0 h-4 w-4 transition-all duration-500 ease-out ${
+                    isDarkMode
+                      ? "rotate-0 scale-100 opacity-100"
+                      : "rotate-90 scale-0 opacity-0"
+                  }`}
+                />
+                <Moon
+                  className={`absolute inset-0 h-4 w-4 transition-all duration-500 ease-out ${
+                    isDarkMode
+                      ? "-rotate-90 scale-0 opacity-0"
+                      : "rotate-0 scale-100 opacity-100"
+                  }`}
+                />
+              </span>
               {isDarkMode ? "Light Mode" : "Dark Mode"}
             </Button>
           </div>
