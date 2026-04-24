@@ -166,7 +166,7 @@ const ProductCatalog = ({
       )}
 
       {/* Search & Filters */}
-      <div className="sticky top-16 z-20 bg-background/95 backdrop-blur-sm -mx-2 px-2 py-2 rounded-lg border border-border/60 mb-8">
+      <div className="sticky top-16 z-20 bg-background/95 sm:backdrop-blur-sm -mx-2 px-2 py-2 rounded-lg border border-border/60 mb-8">
         <div className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">
           Find products
         </div>
@@ -280,7 +280,7 @@ const ProductCatalog = ({
       )}
 
       {/* Title */}
-      <h2 className="font-heading text-2xl sm:text-3xl font-bold text-foreground uppercase tracking-wide mb-2">
+      <h2 className="font-heading text-[1.35rem] sm:text-3xl font-bold text-foreground uppercase tracking-[0.01em] sm:tracking-wide mb-2">
         {brandName ? `${brandName} Products` : "All Products"}
       </h2>
       <p className="text-muted-foreground text-sm mb-10">

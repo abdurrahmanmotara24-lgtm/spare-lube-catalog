@@ -5,10 +5,10 @@ import { trackEvent } from "@/lib/analytics";
 const ContactSection = () => {
   return (
     <section className="max-w-7xl mx-auto section-padding py-20 text-center">
-      <p className="text-xs font-semibold tracking-[0.3em] uppercase text-primary mb-3">
+      <p className="text-xs font-semibold tracking-[0.2em] sm:tracking-[0.3em] uppercase text-primary mb-3">
         Reach Out
       </p>
-      <h2 className="font-heading text-3xl sm:text-4xl font-bold text-foreground uppercase tracking-wide mb-4">
+      <h2 className="font-heading text-[1.75rem] sm:text-4xl font-bold text-foreground uppercase tracking-[0.01em] sm:tracking-wide mb-4">
         Get in Touch
       </h2>
       <p className="text-muted-foreground mb-10 max-w-lg mx-auto">

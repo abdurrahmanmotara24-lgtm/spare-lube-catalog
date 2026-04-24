@@ -193,7 +193,7 @@ const Index = () => {
     const root = document.documentElement;
     const viewDoc = document as ViewTransitionCapableDocument;
 
-    if (!origin || prefersReducedMotion || isLikelyMobile || !viewDoc.startViewTransition) {
+    if (!origin || prefersReducedMotion || !viewDoc.startViewTransition) {
       setIsDarkMode(nextIsDarkMode);
       return;
     }
@@ -227,11 +227,13 @@ const Index = () => {
         `ellipse(${endRadius}px ${endRadius * 0.82}px at ${viewportCenterX}px ${nightfallOriginY}px)`,
       ];
 
+      const transitionDuration = isLikelyMobile ? 900 : 1380;
+
       if (toLight) {
         root.animate(
           { clipPath: sunriseClip },
           {
-            duration: 980,
+            duration: transitionDuration,
             easing: "cubic-bezier(0.16, 1, 0.3, 1)",
             pseudoElement: "::view-transition-new(root)",
           },
@@ -239,7 +241,7 @@ const Index = () => {
         root.animate(
           { clipPath: [fullClip, fullClip] },
           {
-            duration: 980,
+            duration: transitionDuration,
             easing: "ease-out",
             pseudoElement: "::view-transition-old(root)",
           },
@@ -248,7 +250,7 @@ const Index = () => {
         root.animate(
           { clipPath: nightfallClip },
           {
-            duration: 980,
+            duration: transitionDuration,
             easing: "cubic-bezier(0.16, 1, 0.3, 1)",
             pseudoElement: "::view-transition-new(root)",
           },
@@ -256,7 +258,7 @@ const Index = () => {
         root.animate(
           { clipPath: [fullClip, fullClip] },
           {
-            duration: 980,
+            duration: transitionDuration,
             easing: "ease-out",
             pseudoElement: "::view-transition-old(root)",
           },

@@ -33,13 +33,13 @@ const Hero = ({ onBrowseClick }: HeroProps) => {
       />
 
       <div className="relative max-w-7xl mx-auto section-padding py-24 sm:py-32 lg:py-40 text-center">
-        <p className="text-xs sm:text-sm font-semibold tracking-[0.3em] uppercase text-primary mb-4">
+        <p className="text-xs sm:text-sm font-semibold tracking-[0.2em] sm:tracking-[0.3em] uppercase text-primary mb-4">
           {settings.hero_eyebrow}
         </p>
-        <h1 className="font-heading text-4xl sm:text-5xl lg:text-7xl font-bold tracking-wide uppercase text-primary-foreground mb-5 leading-tight whitespace-pre-line">
+        <h1 className="font-heading text-[2rem] sm:text-5xl lg:text-7xl font-bold tracking-[0.01em] sm:tracking-wide uppercase text-primary-foreground mb-5 leading-tight whitespace-pre-line">
           {settings.hero_heading}
         </h1>
-        <p className="text-base sm:text-lg text-primary-foreground/60 mb-10 max-w-xl mx-auto tracking-wide">
+        <p className="text-[0.95rem] sm:text-lg text-primary-foreground/60 mb-10 max-w-xl mx-auto tracking-[0.01em] sm:tracking-wide">
           {settings.hero_subheading}
         </p>
         <Button size="lg" onClick={onBrowseClick} className="text-base tracking-wider uppercase font-semibold">
