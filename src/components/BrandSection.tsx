@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useDbBrands } from "@/hooks/useDbBrands";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
@@ -33,13 +33,26 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
   const scrollGuideRafRef = useRef<number | null>(null);
   const scrollGuideStartRef = useRef<number>(0);
   const scrollGuideTimerRef = useRef<number | null>(null);
+  const [isMobileViewport, setIsMobileViewport] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < MOBILE_BREAKPOINT_PX : false,
+  );
 
   const selectedBrandData = useMemo(
     () => brands.find((brand) => brand.id === selectedBrand) || null,
     [brands, selectedBrand],
   );
-  const shouldReduceMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const isMobileViewport = typeof window !== "undefined" && window.innerWidth < MOBILE_BREAKPOINT_PX;
+  const shouldReduceMotion =
+    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const shouldUseLightMotion = shouldReduceMotion || isMobileViewport;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mediaQuery = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT_PX - 1}px)`);
+    const syncViewport = () => setIsMobileViewport(mediaQuery.matches);
+    syncViewport();
+    mediaQuery.addEventListener("change", syncViewport);
+    return () => mediaQuery.removeEventListener("change", syncViewport);
+  }, []);
 
   const stopScrollGuide = () => {
     if (scrollGuideTimerRef.current) window.clearTimeout(scrollGuideTimerRef.current);
@@ -189,7 +202,7 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
   };
 
   useEffect(() => {
-    if (shouldReduceMotion || isMobileViewport) return;
+    if (shouldUseLightMotion) return;
     if (viewMode !== "grid") return;
     const returningBrandId = lastFocusedBrandRef.current;
     if (!returningBrandId) return;
@@ -205,10 +218,10 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
     return () => {
       stopFollow?.();
     };
-  }, [viewMode, shouldReduceMotion, isMobileViewport]);
+  }, [viewMode, shouldUseLightMotion]);
 
   useEffect(() => {
-    if (shouldReduceMotion || isMobileViewport) return;
+    if (shouldUseLightMotion) return;
     if (viewMode !== "brandFocused" || !selectedBrandData) return;
     if (lastFocusedBrandRef.current !== selectedBrandData.id) {
       lastFocusedBrandRef.current = selectedBrandData.id;
@@ -219,7 +232,7 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
       FOCUS_CAMERA_START_DELAY_MS,
       "fixed",
     );
-  }, [viewMode, selectedBrandData, shouldReduceMotion, isMobileViewport]);
+  }, [viewMode, selectedBrandData, shouldUseLightMotion]);
 
   const handleBrandClick = (brandId: string) => {
     const next = selectedBrand === brandId ? null : brandId;
@@ -245,7 +258,7 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
 
       <LayoutGroup id="brand-tiles">
         <motion.div
-          layout
+          layout={!shouldUseLightMotion}
           transition={tileMove}
           className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
         >
@@ -272,7 +285,7 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
                 return (
                   <motion.button
                     key={brand.id}
-                    layout
+                    layout={!shouldUseLightMotion}
                     layoutId={`brand-tile-${brand.id}`}
                     data-brand-id={brand.id}
                     data-brand-role="grid-tile"
@@ -280,37 +293,43 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
                     aria-pressed={selectedBrand === brand.id}
                     aria-label={`${brand.name}${selectedBrand === brand.id ? " selected" : ""}`}
                     initial={false}
-                    animate={{
-                      opacity: isFocused ? 0.34 : 1,
-                      y: isFocused ? 4 : 0,
-                      scale: isFocused ? 0.985 : 1,
-                      filter: isFocused ? "blur(0px)" : "blur(0px)",
-                    }}
-                    transition={{
-                      ...tileMove,
-                      opacity: {
-                        duration: 0.32,
-                        ease: [0.22, 1, 0.36, 1],
-                        delay: isFocused ? 0.22 : 0,
-                      },
-                      y: {
-                        duration: 0.32,
-                        ease: [0.22, 1, 0.36, 1],
-                        delay: isFocused ? 0.22 : 0,
-                      },
-                      scale: {
-                        duration: 0.32,
-                        ease: [0.22, 1, 0.36, 1],
-                        delay: isFocused ? 0.22 : 0,
-                      },
-                      filter: { duration: 0.01, ease: [0.22, 1, 0.36, 1], delay: 0 },
-                    }}
+                    animate={
+                      shouldUseLightMotion
+                        ? { opacity: 1, y: 0, scale: 1 }
+                        : {
+                            opacity: isFocused ? 0.34 : 1,
+                            y: isFocused ? 4 : 0,
+                            scale: isFocused ? 0.985 : 1,
+                          }
+                    }
+                    transition={
+                      shouldUseLightMotion
+                        ? { duration: 0.2, ease: "easeOut" }
+                        : {
+                            ...tileMove,
+                            opacity: {
+                              duration: 0.32,
+                              ease: [0.22, 1, 0.36, 1],
+                              delay: isFocused ? 0.22 : 0,
+                            },
+                            y: {
+                              duration: 0.32,
+                              ease: [0.22, 1, 0.36, 1],
+                              delay: isFocused ? 0.22 : 0,
+                            },
+                            scale: {
+                              duration: 0.32,
+                              ease: [0.22, 1, 0.36, 1],
+                              delay: isFocused ? 0.22 : 0,
+                            },
+                          }
+                    }
                     className={`group relative overflow-hidden flex flex-col items-center justify-center p-6 rounded-xl cursor-pointer border
                       active:scale-[0.97]
                       ${
                         selectedBrand === brand.id
                           ? "bg-primary text-primary-foreground border-primary shadow-2xl ring-2 ring-primary/40 z-10"
-                          : "bg-card border-border hover:shadow-lg hover:scale-[1.03] hover:border-primary/30"
+                          : "bg-card border-border sm:hover:shadow-lg sm:hover:scale-[1.03] sm:hover:border-primary/30"
                       }
                       ${isFocused ? "pointer-events-none" : ""}`}
                   >
@@ -348,11 +367,11 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
           {viewMode === "brandFocused" && selectedBrandData && (
             <motion.div
               ref={focusedTileWrapperRef}
-              layout
-              initial={{ opacity: 0, y: 26 }}
+              layout={!shouldUseLightMotion}
+              initial={shouldUseLightMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 26 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 26 }}
-              transition={{ duration: 0.95, ease: CAMERA_EASE }}
+              exit={shouldUseLightMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 26 }}
+              transition={shouldUseLightMotion ? { duration: 0.2, ease: "easeOut" } : { duration: 0.95, ease: CAMERA_EASE }}
               className="mt-10 flex flex-col items-center gap-3"
             >
               <motion.button

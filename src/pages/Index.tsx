@@ -188,11 +188,12 @@ const Index = () => {
     if (isThemeTransitioningRef.current) return;
 
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const isLikelyMobile = window.matchMedia("(max-width: 767px), (hover: none), (pointer: coarse)").matches;
     const nextIsDarkMode = !isDarkMode;
     const root = document.documentElement;
     const viewDoc = document as ViewTransitionCapableDocument;
 
-    if (!origin || prefersReducedMotion || !viewDoc.startViewTransition) {
+    if (!origin || prefersReducedMotion || isLikelyMobile || !viewDoc.startViewTransition) {
       setIsDarkMode(nextIsDarkMode);
       return;
     }
@@ -230,7 +231,7 @@ const Index = () => {
         root.animate(
           { clipPath: sunriseClip },
           {
-            duration: 1380,
+            duration: 980,
             easing: "cubic-bezier(0.16, 1, 0.3, 1)",
             pseudoElement: "::view-transition-new(root)",
           },
@@ -238,7 +239,7 @@ const Index = () => {
         root.animate(
           { clipPath: [fullClip, fullClip] },
           {
-            duration: 1380,
+            duration: 980,
             easing: "ease-out",
             pseudoElement: "::view-transition-old(root)",
           },
@@ -247,7 +248,7 @@ const Index = () => {
         root.animate(
           { clipPath: nightfallClip },
           {
-            duration: 1380,
+            duration: 980,
             easing: "cubic-bezier(0.16, 1, 0.3, 1)",
             pseudoElement: "::view-transition-new(root)",
           },
@@ -255,7 +256,7 @@ const Index = () => {
         root.animate(
           { clipPath: [fullClip, fullClip] },
           {
-            duration: 1380,
+            duration: 980,
             easing: "ease-out",
             pseudoElement: "::view-transition-old(root)",
           },

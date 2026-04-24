@@ -33,15 +33,15 @@ const ProductCard = ({ product, isExpanded, onToggleExpand, onAddToQuote }: Prod
 
   return (
     <>
-      <div className="group bg-card rounded-xl border border-border/90 flex flex-col h-full overflow-hidden will-change-transform transition-[transform,box-shadow,border-color] duration-300 ease-out motion-reduce:transition-none hover:-translate-y-1.5 hover:scale-[1.01] hover:shadow-2xl hover:border-primary/30">
+      <div className="group bg-card rounded-xl border border-border/90 flex flex-col h-full overflow-hidden will-change-transform transition-[transform,box-shadow,border-color] duration-300 ease-out motion-reduce:transition-none sm:hover:-translate-y-1.5 sm:hover:scale-[1.01] sm:hover:shadow-2xl sm:hover:border-primary/30">
         <div className="p-4 flex flex-col flex-1">
           {/* Product Image with enlarge icon */}
-          <div className="relative rounded-lg flex items-center justify-center h-32 sm:h-40 mb-4 overflow-hidden border border-border/60 bg-transparent transition-colors duration-300 group-hover:border-primary/30">
+          <div className="relative rounded-lg flex items-center justify-center h-32 sm:h-40 mb-4 overflow-hidden border border-border/60 bg-transparent transition-colors duration-300 sm:group-hover:border-primary/30">
             {product.image ? (
               <img
                 src={product.image}
                 alt={product.name}
-                className="max-h-full max-w-full object-contain p-2 transition-transform duration-300 ease-out motion-reduce:transition-none group-hover:scale-[1.04]"
+                className="max-h-full max-w-full object-contain p-2 transition-transform duration-300 ease-out motion-reduce:transition-none sm:group-hover:scale-[1.04]"
               />
             ) : (
               <div className="h-full w-full flex flex-col items-center justify-center gap-1 bg-transparent">
