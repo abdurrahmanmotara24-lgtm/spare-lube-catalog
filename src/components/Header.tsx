@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { Search, MessageCircle, Menu, X, Moon, Sun } from "lucide-react";
+import { Search, MessageCircle, Menu, X } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { ThemeToggleIcon } from "@/components/ui/theme-toggle-icon";
 import spareLubeLogo from "@/assets/spare-lube-logo.jpg";
 import { trackEvent } from "@/lib/analytics";
 
@@ -8,12 +10,13 @@ interface HeaderProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   isDarkMode: boolean;
-  onToggleDarkMode: () => void;
+  onToggleDarkMode: (origin?: { x: number; y: number }) => void;
 }
 
 const Header = ({ searchQuery, onSearchChange, isDarkMode, onToggleDarkMode }: HeaderProps) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuId = "mobile-header-menu";
+  const prefersReducedMotion = useReducedMotion();
 
   return (
     <header className="sticky top-0 z-50 bg-background border-b border-border">
@@ -56,27 +59,23 @@ const Header = ({ searchQuery, onSearchChange, isDarkMode, onToggleDarkMode }: H
             <Button
               variant="outline"
               size="icon"
-              onClick={onToggleDarkMode}
+              onClick={(event) => onToggleDarkMode({ x: event.clientX, y: event.clientY })}
               aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+              aria-pressed={isDarkMode}
               title={isDarkMode ? "Light mode" : "Dark mode"}
               className="hidden sm:inline-flex"
             >
-              <span className="relative h-4 w-4">
-                <Sun
-                  className={`absolute inset-0 h-4 w-4 transition-all duration-500 ease-out ${
-                    isDarkMode
-                      ? "rotate-0 scale-100 opacity-100"
-                      : "rotate-90 scale-0 opacity-0"
-                  }`}
+              <motion.span
+                className="relative h-4 w-4"
+                whileTap={prefersReducedMotion ? undefined : { scale: 0.88 }}
+                transition={{ duration: 0.14, ease: "easeOut" }}
+              >
+                <ThemeToggleIcon
+                  isDarkMode={isDarkMode}
+                  reducedMotion={Boolean(prefersReducedMotion)}
+                  className="absolute inset-0 text-foreground"
                 />
-                <Moon
-                  className={`absolute inset-0 h-4 w-4 transition-all duration-500 ease-out ${
-                    isDarkMode
-                      ? "-rotate-90 scale-0 opacity-0"
-                      : "rotate-0 scale-100 opacity-100"
-                  }`}
-                />
-              </span>
+              </motion.span>
             </Button>
             <Button asChild variant="whatsapp" size="sm" className="hidden sm:inline-flex">
               <a
@@ -134,23 +133,25 @@ const Header = ({ searchQuery, onSearchChange, isDarkMode, onToggleDarkMode }: H
                 className="w-full h-10 pl-10 pr-4 rounded-md bg-secondary text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
-            <Button variant="outline" size="sm" onClick={onToggleDarkMode} className="w-full">
-              <span className="relative h-4 w-4">
-                <Sun
-                  className={`absolute inset-0 h-4 w-4 transition-all duration-500 ease-out ${
-                    isDarkMode
-                      ? "rotate-0 scale-100 opacity-100"
-                      : "rotate-90 scale-0 opacity-0"
-                  }`}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(event) => onToggleDarkMode({ x: event.clientX, y: event.clientY })}
+              className="w-full"
+              aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+              aria-pressed={isDarkMode}
+            >
+              <motion.span
+                className="relative h-4 w-4"
+                whileTap={prefersReducedMotion ? undefined : { scale: 0.9 }}
+                transition={{ duration: 0.14, ease: "easeOut" }}
+              >
+                <ThemeToggleIcon
+                  isDarkMode={isDarkMode}
+                  reducedMotion={Boolean(prefersReducedMotion)}
+                  className="absolute inset-0 text-foreground"
                 />
-                <Moon
-                  className={`absolute inset-0 h-4 w-4 transition-all duration-500 ease-out ${
-                    isDarkMode
-                      ? "-rotate-90 scale-0 opacity-0"
-                      : "rotate-0 scale-100 opacity-100"
-                  }`}
-                />
-              </span>
+              </motion.span>
               {isDarkMode ? "Light Mode" : "Dark Mode"}
             </Button>
           </div>

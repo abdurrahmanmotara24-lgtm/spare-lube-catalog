@@ -45,7 +45,28 @@
     --sidebar-border: 0 0% 90%;
     --sidebar-ring: 0 85% 46%;
     --hero-overlay-base: 0 0% 8%;
+    --motion-fast: 160ms;
+    --motion-normal: 340ms;
+    --motion-ease-emphasized: cubic-bezier(0.22, 1, 0.36, 1);
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 1ms;
+    --motion-normal: 1ms;
+  }
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+html[data-theme-transition="to-light"]::view-transition-new(root),
+html[data-theme-transition="to-dark"]::view-transition-new(root) {
+  z-index: 1;
 }
 
 @layer base {

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import TrustBar from "@/components/TrustBar";
@@ -13,6 +14,14 @@ import { applyThemeToDocument, useSiteSettings } from "@/hooks/useSiteSettings";
 import { useDbBrands } from "@/hooks/useDbBrands";
 
 const Index = () => {
+  type ThemeToggleOrigin = { x: number; y: number };
+  type ViewTransitionCapableDocument = Document & {
+    startViewTransition?: (updateCallback: () => void) => {
+      ready: Promise<void>;
+      finished: Promise<void>;
+    };
+  };
+
   const { settings } = useSiteSettings();
   const { brands } = useDbBrands();
   const [searchQuery, setSearchQuery] = useState("");
@@ -29,6 +38,7 @@ const Index = () => {
   });
 
   const catalogRef = useRef<HTMLDivElement>(null);
+  const isThemeTransitioningRef = useRef(false);
 
   const brandScopedTheme = useMemo(() => {
     if (!selectedBrand) return settings;
@@ -118,13 +128,98 @@ const Index = () => {
     setBrandViewMode(brandId ? "brandFocused" : "grid");
   };
 
+  const toggleDarkMode = async (origin?: ThemeToggleOrigin) => {
+    if (isThemeTransitioningRef.current) return;
+
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const nextIsDarkMode = !isDarkMode;
+    const root = document.documentElement;
+    const viewDoc = document as ViewTransitionCapableDocument;
+
+    if (!origin || prefersReducedMotion || !viewDoc.startViewTransition) {
+      setIsDarkMode(nextIsDarkMode);
+      return;
+    }
+
+    isThemeTransitioningRef.current = true;
+    const toLight = !nextIsDarkMode;
+    root.dataset.themeTransition = toLight ? "to-light" : "to-dark";
+
+    try {
+      const transition = viewDoc.startViewTransition(() => {
+        flushSync(() => setIsDarkMode(nextIsDarkMode));
+      });
+
+      await transition.ready;
+
+      const endRadius = Math.hypot(
+        Math.max(origin.x, window.innerWidth - origin.x),
+        Math.max(origin.y, window.innerHeight - origin.y),
+      );
+
+      const viewportCenterX = window.innerWidth / 2;
+      const sunriseOriginY = window.innerHeight * 1.08;
+      const nightfallOriginY = window.innerHeight * -0.08;
+      const fullClip = `ellipse(${endRadius}px ${endRadius * 0.82}px at ${viewportCenterX}px ${window.innerHeight / 2}px)`;
+      const sunriseClip = [
+        `ellipse(0px 0px at ${viewportCenterX}px ${sunriseOriginY}px)`,
+        `ellipse(${endRadius}px ${endRadius * 0.82}px at ${viewportCenterX}px ${sunriseOriginY}px)`,
+      ];
+      const nightfallClip = [
+        `ellipse(0px 0px at ${viewportCenterX}px ${nightfallOriginY}px)`,
+        `ellipse(${endRadius}px ${endRadius * 0.82}px at ${viewportCenterX}px ${nightfallOriginY}px)`,
+      ];
+
+      if (toLight) {
+        root.animate(
+          { clipPath: sunriseClip },
+          {
+            duration: 1380,
+            easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+            pseudoElement: "::view-transition-new(root)",
+          },
+        );
+        root.animate(
+          { clipPath: [fullClip, fullClip] },
+          {
+            duration: 1380,
+            easing: "ease-out",
+            pseudoElement: "::view-transition-old(root)",
+          },
+        );
+      } else {
+        root.animate(
+          { clipPath: nightfallClip },
+          {
+            duration: 1380,
+            easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+            pseudoElement: "::view-transition-new(root)",
+          },
+        );
+        root.animate(
+          { clipPath: [fullClip, fullClip] },
+          {
+            duration: 1380,
+            easing: "ease-out",
+            pseudoElement: "::view-transition-old(root)",
+          },
+        );
+      }
+
+      await transition.finished;
+    } finally {
+      delete root.dataset.themeTransition;
+      isThemeTransitioningRef.current = false;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20 sm:pb-10">
       <Header
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         isDarkMode={isDarkMode}
-        onToggleDarkMode={() => setIsDarkMode((prev) => !prev)}
+        onToggleDarkMode={toggleDarkMode}
       />
       <Hero onBrowseClick={scrollToCatalog} />
       <TrustBar />
