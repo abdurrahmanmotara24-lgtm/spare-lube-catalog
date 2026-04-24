@@ -12,7 +12,6 @@ import { Link } from "react-router-dom";
 import { useDbBrands } from "@/hooks/useDbBrands";
 import { useDbCategories } from "@/hooks/useDbCategories";
 import { useDbSizes } from "@/hooks/useDbSizes";
-import { getStoredBrandProductOrder, setStoredBrandProductOrder } from "@/lib/productOrder";
 import { normalizeCategoryName } from "@/lib/categoryNormalization";
 import BrandManager from "@/components/admin/BrandManager";
 import CategoryManager from "@/components/admin/CategoryManager";
@@ -61,10 +60,6 @@ const Admin = () => {
   const [draggingProductId, setDraggingProductId] = useState<string | null>(null);
   const [draggingBrandId, setDraggingBrandId] = useState<string | null>(null);
 
-  // Local per-brand product ordering
-  const [brandProductOrder, setBrandProductOrder] = useState<Record<string, string[]>>(
-    () => getStoredBrandProductOrder(),
-  );
 
   const toggleSize = (s: string, list: string[], setter: (v: string[]) => void) => {
     setter(list.includes(s) ? list.filter((x) => x !== s) : [...list, s]);
@@ -83,34 +78,21 @@ const Admin = () => {
     const { data, error } = await supabase
       .from("products")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: true });
     if (!error && data) {
       const normalized = data.map((product) => ({
         ...product,
         category: normalizeCategoryName(product.category),
         sizes: Array.isArray(product.sizes) ? product.sizes : [],
       }));
-      setProducts(applyStoredBrandOrder(normalized));
+      setProducts(normalized);
     }
     setLoadingProducts(false);
   };
 
-  const applyStoredBrandOrder = (list: DbProduct[]) => {
-    return [...list].sort((a, b) => {
-      if (a.brand !== b.brand) return 0;
-      const order = brandProductOrder[a.brand] || [];
-      const ai = order.indexOf(a.id);
-      const bi = order.indexOf(b.id);
-      if (ai === -1 && bi === -1) return b.created_at.localeCompare(a.created_at);
-      if (ai === -1) return 1;
-      if (bi === -1) return -1;
-      return ai - bi;
-    });
-  };
-
   useEffect(() => {
     if (user) fetchProducts();
-  }, [user, brandProductOrder]);
+  }, [user]);
 
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -215,7 +197,22 @@ const Admin = () => {
     setSavingEdit(false);
   };
 
-  const moveProductWithinBrand = (product: DbProduct, dir: -1 | 1) => {
+  const persistBrandOrder = async (brandId: string, orderedIds: string[]) => {
+    const startTs = Date.now();
+    const updates = orderedIds.map((id, index) =>
+      supabase
+        .from("products")
+        .update({ created_at: new Date(startTs + index).toISOString() })
+        .eq("id", id)
+        .eq("brand", brandId),
+    );
+
+    const results = await Promise.all(updates);
+    const failed = results.find((result) => result.error);
+    if (failed?.error) throw failed.error;
+  };
+
+  const moveProductWithinBrand = async (product: DbProduct, dir: -1 | 1) => {
     const brandId = product.brand;
     const inBrand = products.filter((p) => p.brand === brandId);
     const ids = inBrand.map((p) => p.id);
@@ -224,12 +221,24 @@ const Admin = () => {
     if (current < 0 || target < 0 || target >= ids.length) return;
     const nextIds = [...ids];
     [nextIds[current], nextIds[target]] = [nextIds[target], nextIds[current]];
-    const nextOrder = { ...brandProductOrder, [brandId]: nextIds };
-    setBrandProductOrder(nextOrder);
-    setStoredBrandProductOrder(nextOrder);
+
+    setProducts((prev) => {
+      const byId = new Map(prev.map((p) => [p.id, p]));
+      const reorderedInBrand = nextIds.map((id) => byId.get(id)).filter(Boolean) as DbProduct[];
+      return [...prev.filter((p) => p.brand !== brandId), ...reorderedInBrand];
+    });
+
+    try {
+      await persistBrandOrder(brandId, nextIds);
+      await fetchProducts();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to persist product order";
+      toast({ title: "Error reordering products", description: message, variant: "destructive" });
+      fetchProducts();
+    }
   };
 
-  const reorderProductsByDrag = (brandId: string, draggedId: string, targetId: string) => {
+  const reorderProductsByDrag = async (brandId: string, draggedId: string, targetId: string) => {
     if (draggedId === targetId) return;
     const inBrand = products.filter((p) => p.brand === brandId);
     const ids = inBrand.map((p) => p.id);
@@ -239,9 +248,21 @@ const Admin = () => {
     const targetIndex = withoutDragged.indexOf(targetId);
     if (targetIndex < 0) return;
     withoutDragged.splice(targetIndex, 0, draggedId);
-    const nextOrder = { ...brandProductOrder, [brandId]: withoutDragged };
-    setBrandProductOrder(nextOrder);
-    setStoredBrandProductOrder(nextOrder);
+
+    setProducts((prev) => {
+      const byId = new Map(prev.map((p) => [p.id, p]));
+      const reorderedInBrand = withoutDragged.map((id) => byId.get(id)).filter(Boolean) as DbProduct[];
+      return [...prev.filter((p) => p.brand !== brandId), ...reorderedInBrand];
+    });
+
+    try {
+      await persistBrandOrder(brandId, withoutDragged);
+      await fetchProducts();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to persist product order";
+      toast({ title: "Error reordering products", description: message, variant: "destructive" });
+      fetchProducts();
+    }
   };
 
   const groupedProducts = useMemo(() => {
@@ -434,7 +455,7 @@ const Admin = () => {
                     e.preventDefault();
                     if (!draggingProductId || !draggingBrandId) return;
                     if (draggingBrandId !== product.brand) return;
-                    reorderProductsByDrag(product.brand, draggingProductId, product.id);
+                    void reorderProductsByDrag(product.brand, draggingProductId, product.id);
                     setDraggingProductId(null);
                     setDraggingBrandId(null);
                   }}
@@ -463,10 +484,10 @@ const Admin = () => {
                       )}
                     </div>
                     <div className="flex gap-2 shrink-0 items-center">
-                      <Button variant="outline" size="icon" onClick={() => moveProductWithinBrand(product, -1)} disabled={index === 0}>
+                      <Button variant="outline" size="icon" onClick={() => void moveProductWithinBrand(product, -1)} disabled={index === 0}>
                         <ArrowUp className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="icon" onClick={() => moveProductWithinBrand(product, 1)} disabled={index === items.length - 1}>
+                      <Button variant="outline" size="icon" onClick={() => void moveProductWithinBrand(product, 1)} disabled={index === items.length - 1}>
                         <ArrowDown className="h-4 w-4" />
                       </Button>
                       <Button

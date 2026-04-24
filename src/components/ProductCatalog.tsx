@@ -3,7 +3,6 @@ import ProductCard from "@/components/ProductCard";
 import { useDbProducts } from "@/hooks/useDbProducts";
 import { useDbBrands } from "@/hooks/useDbBrands";
 import { useDbCategories } from "@/hooks/useDbCategories";
-import { getBrandOrderRank } from "@/lib/productOrder";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Search } from "lucide-react";
 
@@ -105,14 +104,15 @@ const ProductCatalog = ({
       return true;
     });
 
-    return base.sort((a, b) => {
-      if (a.brand === b.brand) {
-        const rankA = getBrandOrderRank(a.brand, a.id);
-        const rankB = getBrandOrderRank(b.brand, b.id);
-        if (rankA !== rankB) return rankA - rankB;
-      }
-      return a.name.localeCompare(b.name);
-    });
+    return base
+      .map((product, index) => ({ product, index }))
+      .sort((a, b) => {
+        if (a.product.brand === b.product.brand) {
+          return a.index - b.index;
+        }
+        return a.product.name.localeCompare(b.product.name);
+      })
+      .map(({ product }) => product);
   }, [selectedBrand, selectedCategory, selectedSize, combinedSearch, allProducts, brands]);
 
   const grouped = useMemo(() => {
