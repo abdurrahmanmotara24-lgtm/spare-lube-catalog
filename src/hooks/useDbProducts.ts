@@ -8,10 +8,21 @@ export function useDbProducts() {
   const [loading, setLoading] = useState(true);
 
   const fetchProducts = useCallback(async () => {
-    const { data } = await supabase
+    const withSort = await supabase
       .from("products")
       .select("*")
+      .order("brand", { ascending: true })
+      .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true });
+
+    const missingSortOrder = withSort.error?.message.toLowerCase().includes("sort_order");
+    const { data } = missingSortOrder
+      ? await supabase
+          .from("products")
+          .select("*")
+          .order("brand", { ascending: true })
+          .order("created_at", { ascending: true })
+      : withSort;
 
     if (data) {
       setDbProducts(

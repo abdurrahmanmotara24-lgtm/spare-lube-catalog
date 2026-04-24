@@ -104,15 +104,10 @@ const ProductCatalog = ({
       return true;
     });
 
-    return base
-      .map((product, index) => ({ product, index }))
-      .sort((a, b) => {
-        if (a.product.brand === b.product.brand) {
-          return a.index - b.index;
-        }
-        return a.product.name.localeCompare(b.product.name);
-      })
-      .map(({ product }) => product);
+    return base.sort((a, b) => {
+      if (a.brand === b.brand) return 0;
+      return a.name.localeCompare(b.name);
+    });
   }, [selectedBrand, selectedCategory, selectedSize, combinedSearch, allProducts, brands]);
 
   const grouped = useMemo(() => {

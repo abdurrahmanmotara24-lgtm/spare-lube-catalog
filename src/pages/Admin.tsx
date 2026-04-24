@@ -27,6 +27,7 @@ interface DbProduct {
   description: string | null;
   image_url: string | null;
   created_at: string;
+  sort_order?: number;
 }
 
 const Admin = () => {
@@ -59,6 +60,7 @@ const Admin = () => {
   const [savingEdit, setSavingEdit] = useState(false);
   const [draggingProductId, setDraggingProductId] = useState<string | null>(null);
   const [draggingBrandId, setDraggingBrandId] = useState<string | null>(null);
+  const [supportsSortOrder, setSupportsSortOrder] = useState(true);
 
 
   const toggleSize = (s: string, list: string[], setter: (v: string[]) => void) => {
@@ -75,15 +77,29 @@ const Admin = () => {
   };
 
   const fetchProducts = async () => {
-    const { data, error } = await supabase
+    const withSort = await supabase
       .from("products")
       .select("*")
+      .order("brand", { ascending: true })
+      .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true });
+    const missingSortOrder = withSort.error?.message.toLowerCase().includes("sort_order");
+    const { data, error } = missingSortOrder
+      ? await supabase
+          .from("products")
+          .select("*")
+          .order("brand", { ascending: true })
+          .order("created_at", { ascending: true })
+      : withSort;
+    if (missingSortOrder) {
+      setSupportsSortOrder(false);
+    }
     if (!error && data) {
       const normalized = data.map((product) => ({
         ...product,
         category: normalizeCategoryName(product.category),
         sizes: Array.isArray(product.sizes) ? product.sizes : [],
+        sort_order: product.sort_order ?? 0,
       }));
       setProducts(normalized);
     }
@@ -119,14 +135,30 @@ const Admin = () => {
       image_url = urlData.publicUrl;
     }
 
-    const { error } = await supabase.from("products").insert({
-      name,
-      brand,
-      category,
-      sizes: selectedSizes,
-      description,
-      image_url,
-    });
+    const maxSortInBrand = products
+      .filter((p) => p.brand === brand)
+      .reduce((max, p) => Math.max(max, p.sort_order ?? 0), 0);
+
+    const insertPayload = supportsSortOrder
+      ? {
+          name,
+          brand,
+          category,
+          sizes: selectedSizes,
+          description,
+          image_url,
+          sort_order: maxSortInBrand + 10,
+        }
+      : {
+          name,
+          brand,
+          category,
+          sizes: selectedSizes,
+          description,
+          image_url,
+        };
+
+    const { error } = await supabase.from("products").insert(insertPayload);
 
     if (error) {
       toast({ title: "Error adding product", description: error.message, variant: "destructive" });
@@ -198,18 +230,49 @@ const Admin = () => {
   };
 
   const persistBrandOrder = async (brandId: string, orderedIds: string[]) => {
-    const startTs = Date.now();
+    if (!supportsSortOrder) {
+      const startTs = Date.now();
+      const legacyUpdates = orderedIds.map((id, index) =>
+        supabase
+          .from("products")
+          .update({ created_at: new Date(startTs + index).toISOString() })
+          .eq("id", id)
+          .eq("brand", brandId),
+      );
+      const legacyResults = await Promise.all(legacyUpdates);
+      const legacyFailed = legacyResults.find((result) => result.error);
+      if (legacyFailed?.error) throw legacyFailed.error;
+      return;
+    }
+
     const updates = orderedIds.map((id, index) =>
       supabase
         .from("products")
-        .update({ created_at: new Date(startTs + index).toISOString() })
+        .update({ sort_order: (index + 1) * 10 })
         .eq("id", id)
         .eq("brand", brandId),
     );
 
     const results = await Promise.all(updates);
     const failed = results.find((result) => result.error);
-    if (failed?.error) throw failed.error;
+    if (failed?.error) {
+      if (failed.error.message.toLowerCase().includes("sort_order")) {
+        setSupportsSortOrder(false);
+        const startTs = Date.now();
+        const legacyUpdates = orderedIds.map((id, index) =>
+          supabase
+            .from("products")
+            .update({ created_at: new Date(startTs + index).toISOString() })
+            .eq("id", id)
+            .eq("brand", brandId),
+        );
+        const legacyResults = await Promise.all(legacyUpdates);
+        const legacyFailed = legacyResults.find((result) => result.error);
+        if (legacyFailed?.error) throw legacyFailed.error;
+        return;
+      }
+      throw failed.error;
+    }
   };
 
   const moveProductWithinBrand = async (product: DbProduct, dir: -1 | 1) => {
@@ -225,7 +288,10 @@ const Admin = () => {
     setProducts((prev) => {
       const byId = new Map(prev.map((p) => [p.id, p]));
       const reorderedInBrand = nextIds.map((id) => byId.get(id)).filter(Boolean) as DbProduct[];
-      return [...prev.filter((p) => p.brand !== brandId), ...reorderedInBrand];
+      return [
+        ...prev.filter((p) => p.brand !== brandId),
+        ...reorderedInBrand.map((p, i) => ({ ...p, sort_order: (i + 1) * 10 })),
+      ];
     });
 
     try {
@@ -252,7 +318,10 @@ const Admin = () => {
     setProducts((prev) => {
       const byId = new Map(prev.map((p) => [p.id, p]));
       const reorderedInBrand = withoutDragged.map((id) => byId.get(id)).filter(Boolean) as DbProduct[];
-      return [...prev.filter((p) => p.brand !== brandId), ...reorderedInBrand];
+      return [
+        ...prev.filter((p) => p.brand !== brandId),
+        ...reorderedInBrand.map((p, i) => ({ ...p, sort_order: (i + 1) * 10 })),
+      ];
     });
 
     try {
