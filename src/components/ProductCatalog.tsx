@@ -6,6 +6,7 @@ import { useDbCategories } from "@/hooks/useDbCategories";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Search } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
+import type { Product } from "@/data/products";
 
 interface ProductCatalogProps {
   selectedBrand: string | null;
@@ -17,6 +18,7 @@ interface ProductCatalogProps {
   onSearchChange: (query: string) => void;
   onCategoryChange: (cat: string | null) => void;
   onSizeChange: (size: string | null) => void;
+  onAddToQuote: (product: Product, selectedSize: string | null) => void;
 }
 
 const allSizes = ["250ml", "500ml", "750ml", "1L", "5L", "20L"];
@@ -31,6 +33,7 @@ const ProductCatalog = ({
   onSearchChange,
   onCategoryChange,
   onSizeChange,
+  onAddToQuote,
 }: ProductCatalogProps) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const { dbProducts, loading } = useDbProducts();
@@ -331,6 +334,7 @@ const ProductCatalog = ({
                   product={product}
                   isExpanded={expandedId === product.id}
                   onToggleExpand={handleToggleExpand}
+                  onAddToQuote={onAddToQuote}
                 />
               ))}
             </div>

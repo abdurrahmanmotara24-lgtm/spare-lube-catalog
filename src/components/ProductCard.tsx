@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, Expand, ChevronDown, ZoomIn, ZoomOut } from "lucide-react";
+import { Plus, Expand, ChevronDown, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,9 +14,10 @@ interface ProductCardProps {
   product: Product;
   isExpanded: boolean;
   onToggleExpand: (id: string) => void;
+  onAddToQuote: (product: Product, selectedSize: string | null) => void;
 }
 
-const ProductCard = ({ product, isExpanded, onToggleExpand }: ProductCardProps) => {
+const ProductCard = ({ product, isExpanded, onToggleExpand, onAddToQuote }: ProductCardProps) => {
   const [selectedSize, setSelectedSize] = useState(product.sizes[0] || "");
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const expandRef = useRef<HTMLDivElement>(null);
@@ -28,9 +29,6 @@ const ProductCard = ({ product, isExpanded, onToggleExpand }: ProductCardProps) 
     }
   }, [isExpanded, product.description]);
 
-  const sizeText = selectedSize ? ` (${selectedSize})` : "";
-  const whatsappMessage = encodeURIComponent(`Hi, I would like a quote for ${product.name}${sizeText}`);
-  const whatsappUrl = `https://wa.me/27000000000?text=${whatsappMessage}`;
   const brandName = brands.find((b) => b.id === product.brand)?.name || "";
 
   return (
@@ -138,18 +136,20 @@ const ProductCard = ({ product, isExpanded, onToggleExpand }: ProductCardProps) 
           </div>
         </div>
 
-        {/* Get Quote Button */}
+        {/* Add to Quote List Button */}
         <div className="px-4 pb-4">
-          <Button asChild variant="quote" size="sm" className="text-sm min-h-11">
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => trackEvent("quote_cta_clicked", { productId: product.id, size: selectedSize || "none" })}
-            >
-              <MessageCircle className="h-3.5 w-3.5" />
-              Request Quote
-            </a>
+          <Button
+            type="button"
+            variant="quote"
+            size="sm"
+            className="text-sm min-h-11 w-full"
+            onClick={() => {
+              onAddToQuote(product, selectedSize || null);
+              trackEvent("quote_item_added", { productId: product.id, size: selectedSize || "none" });
+            }}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add to Quote List
           </Button>
         </div>
       </div>

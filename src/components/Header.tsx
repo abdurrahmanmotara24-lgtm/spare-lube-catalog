@@ -1,8 +1,17 @@
 import { useState } from "react";
-import { Search, MessageCircle, Menu, X } from "lucide-react";
+import { Search, MessageCircle, Menu, X, ScrollText } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ThemeToggleIcon } from "@/components/ui/theme-toggle-icon";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import QuoteListSection, { type QuoteListItem } from "@/components/QuoteListSection";
 import spareLubeLogo from "@/assets/spare-lube-logo.jpg";
 import { trackEvent } from "@/lib/analytics";
 
@@ -11,12 +20,24 @@ interface HeaderProps {
   onSearchChange: (query: string) => void;
   isDarkMode: boolean;
   onToggleDarkMode: (origin?: { x: number; y: number }) => void;
+  quoteItems: QuoteListItem[];
+  onRemoveQuoteItem: (productId: string, size: string | null) => void;
+  onClearQuoteList: () => void;
 }
 
-const Header = ({ searchQuery, onSearchChange, isDarkMode, onToggleDarkMode }: HeaderProps) => {
+const Header = ({
+  searchQuery,
+  onSearchChange,
+  isDarkMode,
+  onToggleDarkMode,
+  quoteItems,
+  onRemoveQuoteItem,
+  onClearQuoteList,
+}: HeaderProps) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuId = "mobile-header-menu";
   const prefersReducedMotion = useReducedMotion();
+  const quoteCount = quoteItems.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <header className="sticky top-0 z-50 bg-background border-b border-border">
@@ -89,6 +110,40 @@ const Header = ({ searchQuery, onSearchChange, isDarkMode, onToggleDarkMode }: H
                 WhatsApp
               </a>
             </Button>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="hidden sm:inline-flex relative border-border bg-card text-foreground hover:bg-muted hover:border-border"
+                  onClick={() => trackEvent("header_quote_panel_opened", { source: "desktop_header" })}
+                >
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted ring-1 ring-border">
+                    <ScrollText className="h-3.5 w-3.5" />
+                  </span>
+                  Quote List
+                  {quoteCount > 0 && (
+                    <span className="ml-1 inline-flex min-w-5 h-5 px-1 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold ring-2 ring-background shadow-sm">
+                      {quoteCount}
+                    </span>
+                  )}
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+                <SheetHeader className="mb-4">
+                  <SheetTitle>Your Quote List</SheetTitle>
+                  <SheetDescription>
+                    Review added items and send one WhatsApp quote request.
+                  </SheetDescription>
+                </SheetHeader>
+                <QuoteListSection
+                  items={quoteItems}
+                  onRemoveItem={onRemoveQuoteItem}
+                  onClearAll={onClearQuoteList}
+                />
+              </SheetContent>
+            </Sheet>
             <Button asChild variant="whatsapp" size="icon" className="sm:hidden h-11 w-11">
               <a
                 href="https://wa.me/27000000000?text=Hi%2C%20I%20would%20like%20to%20enquire%20about%20your%20products"
@@ -100,6 +155,40 @@ const Header = ({ searchQuery, onSearchChange, isDarkMode, onToggleDarkMode }: H
                 <MessageCircle className="h-4 w-4" />
               </a>
             </Button>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="sm:hidden h-11 w-11 relative border-border bg-card text-foreground hover:bg-muted hover:border-border"
+                  aria-label="Open quote list"
+                  onClick={() => trackEvent("header_quote_panel_opened", { source: "mobile_header" })}
+                >
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted ring-1 ring-border">
+                    <ScrollText className="h-3.5 w-3.5" />
+                  </span>
+                  {quoteCount > 0 && (
+                    <span className="absolute -top-1 -right-1 inline-flex min-w-5 h-5 px-1 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold ring-2 ring-background shadow-sm">
+                      {quoteCount}
+                    </span>
+                  )}
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+                <SheetHeader className="mb-4">
+                  <SheetTitle>Your Quote List</SheetTitle>
+                  <SheetDescription>
+                    Review added items and send one WhatsApp quote request.
+                  </SheetDescription>
+                </SheetHeader>
+                <QuoteListSection
+                  items={quoteItems}
+                  onRemoveItem={onRemoveQuoteItem}
+                  onClearAll={onClearQuoteList}
+                />
+              </SheetContent>
+            </Sheet>
             <button
               type="button"
               className="sm:hidden min-h-11 min-w-11 p-2 text-foreground"

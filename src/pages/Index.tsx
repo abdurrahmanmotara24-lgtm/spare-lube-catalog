@@ -9,9 +9,13 @@ import WhyChoose from "@/components/WhyChoose";
 import ContactSection from "@/components/ContactSection";
 import Footer from "@/components/Footer";
 import WhatsAppFab from "@/components/WhatsAppFab";
+import { type QuoteListItem } from "@/components/QuoteListSection";
+import type { Product } from "@/data/products";
 import { getBrandThemeSuggestion } from "@/lib/brandThemeSuggestions";
 import { applyThemeToDocument, useSiteSettings } from "@/hooks/useSiteSettings";
 import { useDbBrands } from "@/hooks/useDbBrands";
+
+const QUOTE_LIST_STORAGE_KEY = "spare-lube-quote-list";
 
 const Index = () => {
   type ThemeToggleOrigin = { x: number; y: number };
@@ -29,6 +33,19 @@ const Index = () => {
   const [brandViewMode, setBrandViewMode] = useState<"grid" | "brandFocused">("grid");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [quoteItems, setQuoteItems] = useState<QuoteListItem[]>(() => {
+    if (typeof window === "undefined") return [];
+    const stored = window.localStorage.getItem(QUOTE_LIST_STORAGE_KEY);
+    if (!stored) return [];
+
+    try {
+      const parsed = JSON.parse(stored) as QuoteListItem[];
+      if (!Array.isArray(parsed)) return [];
+      return parsed;
+    } catch {
+      return [];
+    }
+  });
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     const saved = window.localStorage.getItem("color-mode");
@@ -68,6 +85,10 @@ const Index = () => {
     root.classList.toggle("dark", isDarkMode);
     window.localStorage.setItem("color-mode", isDarkMode ? "dark" : "light");
   }, [isDarkMode]);
+
+  useEffect(() => {
+    window.localStorage.setItem(QUOTE_LIST_STORAGE_KEY, JSON.stringify(quoteItems));
+  }, [quoteItems]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -126,6 +147,41 @@ const Index = () => {
   const handleCatalogBrandChange = (brandId: string | null) => {
     setSelectedBrand(brandId);
     setBrandViewMode(brandId ? "brandFocused" : "grid");
+  };
+
+  const handleAddToQuote = (product: Product, selectedSize: string | null) => {
+    const brandName = brands.find((brand) => brand.id === product.brand)?.name ?? "Brand";
+
+    setQuoteItems((prev) => {
+      const existingIndex = prev.findIndex(
+        (item) => item.productId === product.id && item.size === selectedSize,
+      );
+
+      if (existingIndex === -1) {
+        return [
+          ...prev,
+          {
+            productId: product.id,
+            productName: product.name,
+            brandName,
+            size: selectedSize,
+            quantity: 1,
+          },
+        ];
+      }
+
+      return prev.map((item, index) =>
+        index === existingIndex ? { ...item, quantity: item.quantity + 1 } : item,
+      );
+    });
+  };
+
+  const handleRemoveQuoteItem = (productId: string, size: string | null) => {
+    setQuoteItems((prev) => prev.filter((item) => !(item.productId === productId && item.size === size)));
+  };
+
+  const handleClearQuoteList = () => {
+    setQuoteItems([]);
   };
 
   const toggleDarkMode = async (origin?: ThemeToggleOrigin) => {
@@ -220,6 +276,9 @@ const Index = () => {
         onSearchChange={setSearchQuery}
         isDarkMode={isDarkMode}
         onToggleDarkMode={toggleDarkMode}
+        quoteItems={quoteItems}
+        onRemoveQuoteItem={handleRemoveQuoteItem}
+        onClearQuoteList={handleClearQuoteList}
       />
       <Hero onBrowseClick={scrollToCatalog} />
       <TrustBar />
@@ -240,6 +299,7 @@ const Index = () => {
           onSearchChange={setSearchQuery}
           onCategoryChange={setSelectedCategory}
           onSizeChange={setSelectedSize}
+          onAddToQuote={handleAddToQuote}
         />
       </div>
       <WhyChoose />
