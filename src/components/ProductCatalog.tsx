@@ -1,18 +1,18 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import ProductCard from "@/components/ProductCard";
-import { products as hardcodedProducts } from "@/data/products";
 import { useDbProducts } from "@/hooks/useDbProducts";
 import { useDbBrands } from "@/hooks/useDbBrands";
 import { useDbCategories } from "@/hooks/useDbCategories";
 import { getBrandOrderRank } from "@/lib/productOrder";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search } from "lucide-react";
+import { ArrowLeft, Search } from "lucide-react";
 
 interface ProductCatalogProps {
   selectedBrand: string | null;
   selectedCategory: string | null;
   selectedSize: string | null;
   searchQuery: string;
+  onBackToBrands: () => void;
   onBrandChange: (brandId: string | null) => void;
   onSearchChange: (query: string) => void;
   onCategoryChange: (cat: string | null) => void;
@@ -26,6 +26,7 @@ const ProductCatalog = ({
   selectedCategory,
   selectedSize,
   searchQuery,
+  onBackToBrands,
   onBrandChange,
   onSearchChange,
   onCategoryChange,
@@ -42,7 +43,7 @@ const ProductCatalog = ({
     setExpandedId((prev) => (prev === id ? null : id));
   }, []);
 
-  const allProducts = useMemo(() => [...hardcodedProducts, ...dbProducts], [dbProducts]);
+  const allProducts = useMemo(() => dbProducts, [dbProducts]);
 
   // Simulate loading on filter change
   useEffect(() => {
@@ -148,7 +149,14 @@ const ProductCatalog = ({
   return (
     <section className="max-w-7xl mx-auto section-padding py-16">
       {brandName && (
-        <div className="mb-5 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 flex flex-wrap items-center gap-2">
+        <div className="mb-5 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 flex flex-wrap items-center gap-2 animate-in fade-in slide-in-from-top-1 duration-300">
+          <button
+            onClick={onBackToBrands}
+            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-primary hover:bg-primary/10 transition-colors mr-1"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back
+          </button>
           <p className="text-sm font-medium text-foreground">
             Active brand: <span className="text-primary">{brandName}</span>
           </p>

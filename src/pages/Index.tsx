@@ -17,6 +17,7 @@ const Index = () => {
   const { brands } = useDbBrands();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+  const [brandViewMode, setBrandViewMode] = useState<"grid" | "brandFocused">("grid");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
@@ -95,10 +96,20 @@ const Index = () => {
   const handleBrandSelect = (brandId: string | null) => {
     setSelectedBrand(brandId);
     if (brandId) {
-      setTimeout(() => {
-        catalogRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 100);
+      setBrandViewMode("brandFocused");
+      return;
     }
+    setBrandViewMode("grid");
+  };
+
+  const handleBackToBrandGrid = () => {
+    setSelectedBrand(null);
+    setBrandViewMode("grid");
+  };
+
+  const handleCatalogBrandChange = (brandId: string | null) => {
+    setSelectedBrand(brandId);
+    setBrandViewMode(brandId ? "brandFocused" : "grid");
   };
 
   return (
@@ -111,14 +122,20 @@ const Index = () => {
       />
       <Hero onBrowseClick={scrollToCatalog} />
       <TrustBar />
-      <BrandSection selectedBrand={selectedBrand} onBrandSelect={handleBrandSelect} />
+      <BrandSection
+        selectedBrand={selectedBrand}
+        viewMode={brandViewMode}
+        onBrandSelect={handleBrandSelect}
+        onBackToGrid={handleBackToBrandGrid}
+      />
       <div ref={catalogRef}>
         <ProductCatalog
           selectedBrand={selectedBrand}
           selectedCategory={selectedCategory}
           selectedSize={selectedSize}
           searchQuery={searchQuery}
-          onBrandChange={setSelectedBrand}
+          onBackToBrands={handleBackToBrandGrid}
+          onBrandChange={handleCatalogBrandChange}
           onSearchChange={setSearchQuery}
           onCategoryChange={setSelectedCategory}
           onSizeChange={setSelectedSize}

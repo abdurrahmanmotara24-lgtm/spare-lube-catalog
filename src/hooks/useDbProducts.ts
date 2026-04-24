@@ -1,35 +1,47 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Product } from "@/data/products";
+import { normalizeCategoryName } from "@/lib/categoryNormalization";
 
 export function useDbProducts() {
   const [dbProducts, setDbProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase
-        .from("products")
-        .select("*")
-        .order("created_at", { ascending: true });
+  const fetchProducts = useCallback(async () => {
+    const { data } = await supabase
+      .from("products")
+      .select("*")
+      .order("created_at", { ascending: true });
 
-      if (data) {
-        setDbProducts(
-          data.map((p) => ({
-            id: p.id,
-            name: p.name,
-            brand: p.brand,
-            category: p.category,
-            sizes: p.sizes || [],
-            image: p.image_url || "",
-            description: p.description || "",
-          }))
-        );
-      }
-      setLoading(false);
-    };
-    fetch();
+    if (data) {
+      setDbProducts(
+        data.map((p) => ({
+          id: p.id,
+          name: p.name,
+          brand: p.brand,
+          category: normalizeCategoryName(p.category),
+          sizes: p.sizes || [],
+          image: p.image_url || "",
+          description: p.description || "",
+        })),
+      );
+    }
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    fetchProducts();
+    const channel = supabase
+      .channel(`products-changes-${crypto.randomUUID()}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => {
+        fetchProducts();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchProducts]);
 
   return { dbProducts, loading };
 }

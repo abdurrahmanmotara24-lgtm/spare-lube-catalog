@@ -13,6 +13,7 @@ import { useDbBrands } from "@/hooks/useDbBrands";
 import { useDbCategories } from "@/hooks/useDbCategories";
 import { useDbSizes } from "@/hooks/useDbSizes";
 import { getStoredBrandProductOrder, setStoredBrandProductOrder } from "@/lib/productOrder";
+import { normalizeCategoryName } from "@/lib/categoryNormalization";
 import BrandManager from "@/components/admin/BrandManager";
 import CategoryManager from "@/components/admin/CategoryManager";
 import SizeManager from "@/components/admin/SizeManager";
@@ -84,6 +85,7 @@ const Admin = () => {
     if (!error && data) {
       const normalized = data.map((product) => ({
         ...product,
+        category: normalizeCategoryName(product.category),
         sizes: Array.isArray(product.sizes) ? product.sizes : [],
       }));
       setProducts(applyStoredBrandOrder(normalized));
@@ -107,9 +109,6 @@ const Admin = () => {
   useEffect(() => {
     if (user) fetchProducts();
   }, [user, brandProductOrder]);
-
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><p className="text-muted-foreground">Loading...</p></div>;
-  if (!user) return <Navigate to="/login" replace />;
 
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -174,7 +173,7 @@ const Admin = () => {
     setEditingProductId(product.id);
     setEditName(product.name);
     setEditBrand(product.brand);
-    setEditCategory(product.category);
+    setEditCategory(normalizeCategoryName(product.category));
     setEditSizes(Array.isArray(product.sizes) ? product.sizes : []);
     setEditDescription(product.description || "");
     setEditImageUrl(product.image_url || "");
@@ -199,7 +198,7 @@ const Admin = () => {
     const { error } = await supabase.from("products").update({
       name: editName,
       brand: editBrand,
-      category: editCategory,
+      category: normalizeCategoryName(editCategory),
       sizes: editSizes,
       description: editDescription,
       image_url: nextImageUrl || null,
@@ -236,6 +235,9 @@ const Admin = () => {
     });
     return map;
   }, [products]);
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><p className="text-muted-foreground">Loading...</p></div>;
+  if (!user) return <Navigate to="/login" replace />;
 
   return (
     <div className="min-h-screen bg-background">
