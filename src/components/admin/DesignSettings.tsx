@@ -103,7 +103,8 @@ const DesignSettings = () => {
     setSaving(true);
     const { error } = await supabase
       .from("site_settings")
-      .update({
+      .upsert({
+        id: "main",
         primary_color: draft.primary_color,
         secondary_color: draft.secondary_color,
         accent_color: draft.accent_color,
@@ -116,8 +117,7 @@ const DesignSettings = () => {
         hero_eyebrow: draft.hero_eyebrow,
         hero_heading: draft.hero_heading,
         hero_subheading: draft.hero_subheading,
-      })
-      .eq("id", "main");
+      }, { onConflict: "id" });
     setSaving(false);
     if (error) {
       toast({ title: "Save failed", description: error.message, variant: "destructive" });
