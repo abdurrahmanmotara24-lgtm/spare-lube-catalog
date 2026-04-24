@@ -21,10 +21,18 @@ const CAMERA_ADAPTIVE_SETTLE_FRAMES = 28;
 const CAMERA_ADAPTIVE_STABILIZE_MS = 0;
 const CAMERA_ADAPTIVE_MIN_STEP = 0.2;
 const CAMERA_SMOOTH_TIME_S = 0.4;
+const MOBILE_ANIMATION_SPEED_MULTIPLIER = 1.15;
 
 const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: BrandSectionProps) => {
   const { brands, loading } = useDbBrands();
-  const tileMove = { type: "tween" as const, duration: 0.95, ease: CAMERA_EASE };
+  const isMobileViewport =
+    typeof window !== "undefined" && window.matchMedia("(max-width: 767px), (hover: none), (pointer: coarse)").matches;
+  const mobileDurationMultiplier = isMobileViewport ? MOBILE_ANIMATION_SPEED_MULTIPLIER : 1;
+  const tileMove = {
+    type: "tween" as const,
+    duration: 0.95 * mobileDurationMultiplier,
+    ease: CAMERA_EASE,
+  };
 
   const focusedTileWrapperRef = useRef<HTMLDivElement | null>(null);
   const lastFocusedBrandRef = useRef<string | null>(null);
@@ -285,17 +293,17 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
                     transition={{
                       ...tileMove,
                       opacity: {
-                        duration: 0.32,
+                        duration: 0.32 * mobileDurationMultiplier,
                         ease: [0.22, 1, 0.36, 1],
                         delay: isFocused ? 0.22 : 0,
                       },
                       y: {
-                        duration: 0.32,
+                        duration: 0.32 * mobileDurationMultiplier,
                         ease: [0.22, 1, 0.36, 1],
                         delay: isFocused ? 0.22 : 0,
                       },
                       scale: {
-                        duration: 0.32,
+                        duration: 0.32 * mobileDurationMultiplier,
                         ease: [0.22, 1, 0.36, 1],
                         delay: isFocused ? 0.22 : 0,
                       },
@@ -347,7 +355,7 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
               initial={{ opacity: 0, y: 26 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 26 }}
-              transition={{ duration: 0.95, ease: CAMERA_EASE }}
+              transition={{ duration: 0.95 * mobileDurationMultiplier, ease: CAMERA_EASE }}
               className="mt-10 flex flex-col items-center gap-3"
             >
               <motion.button

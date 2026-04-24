@@ -58,10 +58,10 @@ const ProductCard = ({ product, isExpanded, onToggleExpand, onAddToQuote }: Prod
                   setLightboxOpen(true);
                   trackEvent("product_image_zoom_opened", { productId: product.id });
                 }}
-                className="absolute top-2 right-2 h-10 w-10 rounded-md bg-background/70 backdrop-blur-sm text-foreground/70 hover:text-foreground hover:bg-background/90 transition-all opacity-80 sm:opacity-0 sm:group-hover:opacity-100 inline-flex items-center justify-center"
+                className="absolute top-2 right-2 h-8 w-8 sm:h-10 sm:w-10 rounded-md bg-background/70 backdrop-blur-sm text-foreground/70 hover:text-foreground hover:bg-background/90 transition-all opacity-80 sm:opacity-0 sm:group-hover:opacity-100 inline-flex items-center justify-center"
                 aria-label="Enlarge image"
               >
-                <Expand className="h-3.5 w-3.5" />
+                <Expand className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               </button>
             )}
           </div>
@@ -146,7 +146,7 @@ const ProductCard = ({ product, isExpanded, onToggleExpand, onAddToQuote }: Prod
             type="button"
             variant="quote"
             size="sm"
-            className="text-sm min-h-11 w-full"
+            className="text-xs sm:text-sm min-h-11 w-full"
             onClick={() => {
               onAddToQuote(product, selectedSize || null);
               trackEvent("quote_item_added", { productId: product.id, size: selectedSize || "none" });
