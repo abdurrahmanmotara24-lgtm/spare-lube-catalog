@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useDbBrands } from "@/hooks/useDbBrands";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
+import { trackEvent } from "@/lib/analytics";
 
 interface BrandSectionProps {
   selectedBrand: string | null;
@@ -20,6 +21,7 @@ const CAMERA_ADAPTIVE_SETTLE_FRAMES = 28;
 const CAMERA_ADAPTIVE_STABILIZE_MS = 0;
 const CAMERA_ADAPTIVE_MIN_STEP = 0.2;
 const CAMERA_SMOOTH_TIME_S = 0.4;
+const MOBILE_BREAKPOINT_PX = 640;
 
 const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: BrandSectionProps) => {
   const { brands, loading } = useDbBrands();
@@ -36,6 +38,8 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
     () => brands.find((brand) => brand.id === selectedBrand) || null,
     [brands, selectedBrand],
   );
+  const shouldReduceMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const isMobileViewport = typeof window !== "undefined" && window.innerWidth < MOBILE_BREAKPOINT_PX;
 
   const stopScrollGuide = () => {
     if (scrollGuideTimerRef.current) window.clearTimeout(scrollGuideTimerRef.current);
@@ -185,6 +189,7 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
   };
 
   useEffect(() => {
+    if (shouldReduceMotion || isMobileViewport) return;
     if (viewMode !== "grid") return;
     const returningBrandId = lastFocusedBrandRef.current;
     if (!returningBrandId) return;
@@ -200,9 +205,10 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
     return () => {
       stopFollow?.();
     };
-  }, [viewMode]);
+  }, [viewMode, shouldReduceMotion, isMobileViewport]);
 
   useEffect(() => {
+    if (shouldReduceMotion || isMobileViewport) return;
     if (viewMode !== "brandFocused" || !selectedBrandData) return;
     if (lastFocusedBrandRef.current !== selectedBrandData.id) {
       lastFocusedBrandRef.current = selectedBrandData.id;
@@ -213,18 +219,21 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
       FOCUS_CAMERA_START_DELAY_MS,
       "fixed",
     );
-  }, [viewMode, selectedBrandData]);
+  }, [viewMode, selectedBrandData, shouldReduceMotion, isMobileViewport]);
 
   const handleBrandClick = (brandId: string) => {
     const next = selectedBrand === brandId ? null : brandId;
     if (next) {
+      trackEvent("brand_selected", { brandId: next, source: "brand_grid" });
       onBrandSelect(next);
       return;
     }
     if (viewMode === "brandFocused") {
+      trackEvent("brand_cleared", { brandId, source: "focused_brand" });
       onBackToGrid();
       return;
     }
+    trackEvent("brand_cleared", { brandId, source: "brand_grid" });
     onBrandSelect(null);
   };
 
@@ -376,8 +385,11 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
               </motion.button>
 
               <button
-                onClick={onBackToGrid}
-                className="text-sm font-semibold text-primary hover:underline"
+                onClick={() => {
+                  trackEvent("brand_show_all_clicked", { brandId: selectedBrandData.id });
+                  onBackToGrid();
+                }}
+                className="text-sm font-semibold text-primary hover:underline min-h-11 px-3"
               >
                 Show all brands
               </button>

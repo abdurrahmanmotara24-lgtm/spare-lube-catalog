@@ -5,6 +5,7 @@ import { useDbBrands } from "@/hooks/useDbBrands";
 import { useDbCategories } from "@/hooks/useDbCategories";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Search } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
 
 interface ProductCatalogProps {
   selectedBrand: string | null;
@@ -31,10 +32,8 @@ const ProductCatalog = ({
   onCategoryChange,
   onSizeChange,
 }: ProductCatalogProps) => {
-  const [loading, setLoading] = useState(false);
-  const [localSearch, setLocalSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const { dbProducts } = useDbProducts();
+  const { dbProducts, loading } = useDbProducts();
   const { brands } = useDbBrands();
   const { categories } = useDbCategories();
 
@@ -44,14 +43,7 @@ const ProductCatalog = ({
 
   const allProducts = useMemo(() => dbProducts, [dbProducts]);
 
-  // Simulate loading on filter change
-  useEffect(() => {
-    setLoading(true);
-    const t = setTimeout(() => setLoading(false), 300);
-    return () => clearTimeout(t);
-  }, [selectedBrand, selectedCategory, selectedSize]);
-
-  const combinedSearch = searchQuery.trim() || localSearch.trim();
+  const combinedSearch = searchQuery.trim();
 
   const brandScopedProducts = useMemo(() => {
     if (!selectedBrand) return allProducts;
@@ -134,10 +126,10 @@ const ProductCatalog = ({
     .join(" + ");
 
   const clearAllFilters = () => {
+    trackEvent("catalog_filters_cleared");
     onBrandChange(null);
     onCategoryChange(null);
     onSizeChange(null);
-    setLocalSearch("");
     onSearchChange("");
   };
 
@@ -146,8 +138,11 @@ const ProductCatalog = ({
       {brandName && (
         <div className="mb-5 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 flex flex-wrap items-center gap-2 animate-in fade-in slide-in-from-top-1 duration-300">
           <button
-            onClick={onBackToBrands}
-            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-primary hover:bg-primary/10 transition-colors mr-1"
+            onClick={() => {
+              onBackToBrands();
+              trackEvent("catalog_back_to_brands_clicked");
+            }}
+            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-primary hover:bg-primary/10 transition-colors mr-1 min-h-10"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Back
@@ -156,8 +151,11 @@ const ProductCatalog = ({
             Active brand: <span className="text-primary">{brandName}</span>
           </p>
           <button
-            onClick={() => onBrandChange(null)}
-            className="text-xs font-semibold text-primary hover:underline"
+            onClick={() => {
+              onBrandChange(null);
+              trackEvent("catalog_brand_filter_cleared");
+            }}
+            className="text-xs font-semibold text-primary hover:underline min-h-10 px-1"
           >
             Clear brand
           </button>
@@ -165,20 +163,31 @@ const ProductCatalog = ({
       )}
 
       {/* Search & Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-10">
+      <div className="sticky top-16 z-20 bg-background/95 backdrop-blur-sm -mx-2 px-2 py-2 rounded-lg border border-border/60 mb-8">
+        <div className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">
+          Find products
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
             placeholder="Search products..."
-            value={localSearch}
-            onChange={(e) => setLocalSearch(e.target.value)}
+            value={searchQuery}
+            onChange={(e) => {
+              onSearchChange(e.target.value);
+              trackEvent("catalog_search_changed", { hasQuery: Boolean(e.target.value.trim()) });
+            }}
             className="w-full h-11 pl-10 pr-4 rounded-lg bg-muted text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
         <select
           value={selectedCategory || ""}
-          onChange={(e) => onCategoryChange(e.target.value || null)}
+          onChange={(e) => {
+            const next = e.target.value || null;
+            onCategoryChange(next);
+            trackEvent("catalog_category_changed", { category: next || "all" });
+          }}
           className="h-11 px-4 rounded-lg bg-muted text-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="">All Categories</option>
@@ -191,7 +200,11 @@ const ProductCatalog = ({
 
         <select
           value={selectedSize || ""}
-          onChange={(e) => onSizeChange(e.target.value || null)}
+          onChange={(e) => {
+            const next = e.target.value || null;
+            onSizeChange(next);
+            trackEvent("catalog_size_changed", { size: next || "all" });
+          }}
           className="h-11 px-4 rounded-lg bg-muted text-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="">All Sizes</option>
@@ -203,11 +216,12 @@ const ProductCatalog = ({
         {hasAnyFilter && (
           <button
             onClick={clearAllFilters}
-            className="text-sm text-primary font-semibold hover:underline self-center"
+            className="text-sm text-primary font-semibold hover:underline self-center min-h-11 px-2"
           >
             Clear all filters
           </button>
         )}
+      </div>
       </div>
 
       {hasAnyFilter && (
@@ -217,24 +231,33 @@ const ProductCatalog = ({
           </span>
           {brandName && (
             <button
-              onClick={() => onBrandChange(null)}
-              className="text-xs px-2.5 py-1 rounded-full border border-border bg-card hover:border-primary/40"
+              onClick={() => {
+                onBrandChange(null);
+                trackEvent("catalog_brand_filter_chip_cleared");
+              }}
+              className="text-xs px-2.5 py-1 rounded-full border border-border bg-card hover:border-primary/40 max-w-[180px] truncate"
             >
               Brand: {brandName} ×
             </button>
           )}
           {selectedCategory && (
             <button
-              onClick={() => onCategoryChange(null)}
-              className="text-xs px-2.5 py-1 rounded-full border border-border bg-card hover:border-primary/40"
+              onClick={() => {
+                onCategoryChange(null);
+                trackEvent("catalog_category_filter_chip_cleared");
+              }}
+              className="text-xs px-2.5 py-1 rounded-full border border-border bg-card hover:border-primary/40 max-w-[180px] truncate"
             >
               Category: {selectedCategory} ×
             </button>
           )}
           {selectedSize && (
             <button
-              onClick={() => onSizeChange(null)}
-              className="text-xs px-2.5 py-1 rounded-full border border-border bg-card hover:border-primary/40"
+              onClick={() => {
+                onSizeChange(null);
+                trackEvent("catalog_size_filter_chip_cleared");
+              }}
+              className="text-xs px-2.5 py-1 rounded-full border border-border bg-card hover:border-primary/40 max-w-[180px] truncate"
             >
               Size: {selectedSize} ×
             </button>
@@ -242,10 +265,10 @@ const ProductCatalog = ({
           {combinedSearch && (
             <button
               onClick={() => {
-                setLocalSearch("");
                 onSearchChange("");
+                trackEvent("catalog_search_chip_cleared");
               }}
-              className="text-xs px-2.5 py-1 rounded-full border border-border bg-card hover:border-primary/40"
+              className="text-xs px-2.5 py-1 rounded-full border border-border bg-card hover:border-primary/40 max-w-[220px] truncate"
             >
               Search: {combinedSearch} ×
             </button>
@@ -277,11 +300,22 @@ const ProductCatalog = ({
           <p className="text-lg text-foreground mb-2">
             No products found{emptyContext ? ` for ${emptyContext}` : "."}
           </p>
-          <p className="text-sm mb-4">Try adjusting your filters or search terms.</p>
+          <p className="text-sm mb-4">Try broadening your filters or clearing all filters to see the full catalog.</p>
           {hasAnyFilter && (
-            <button onClick={clearAllFilters} className="text-sm font-semibold text-primary hover:underline">
-              Clear all filters
-            </button>
+            <div className="flex items-center justify-center gap-4">
+              <button onClick={clearAllFilters} className="text-sm font-semibold text-primary hover:underline">
+                Clear all filters
+              </button>
+              <button
+                onClick={() => {
+                  onBackToBrands();
+                  trackEvent("catalog_no_results_back_to_brands");
+                }}
+                className="text-sm font-semibold text-primary hover:underline"
+              >
+                Browse brands
+              </button>
+            </div>
           )}
         </div>
       ) : (

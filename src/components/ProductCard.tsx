@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import type { Product } from "@/data/products";
 import { brands } from "@/data/products";
+import { trackEvent } from "@/lib/analytics";
 
 interface ProductCardProps {
   product: Product;
@@ -35,11 +36,7 @@ const ProductCard = ({ product, isExpanded, onToggleExpand }: ProductCardProps) 
   return (
     <>
       <div className="bg-card rounded-xl border border-border flex flex-col h-full transition-all duration-200 hover:shadow-lg overflow-hidden">
-        {/* Clickable card area */}
-        <div
-          className="p-4 flex flex-col flex-1 cursor-pointer"
-          onClick={() => onToggleExpand(product.id)}
-        >
+        <div className="p-4 flex flex-col flex-1">
           {/* Product Image with enlarge icon */}
           <div className="relative rounded-lg flex items-center justify-center h-32 sm:h-40 mb-4 overflow-hidden group border border-border/60 bg-transparent">
             {product.image ? (
@@ -57,8 +54,9 @@ const ProductCard = ({ product, isExpanded, onToggleExpand }: ProductCardProps) 
                 onClick={(e) => {
                   e.stopPropagation();
                   setLightboxOpen(true);
+                  trackEvent("product_image_zoom_opened", { productId: product.id });
                 }}
-                className="absolute top-2 right-2 p-1.5 rounded-md bg-background/70 backdrop-blur-sm text-foreground/70 hover:text-foreground hover:bg-background/90 transition-all opacity-60 sm:opacity-0 sm:group-hover:opacity-100"
+                className="absolute top-2 right-2 h-10 w-10 rounded-md bg-background/70 backdrop-blur-sm text-foreground/70 hover:text-foreground hover:bg-background/90 transition-all opacity-80 sm:opacity-0 sm:group-hover:opacity-100 inline-flex items-center justify-center"
                 aria-label="Enlarge image"
               >
                 <Expand className="h-3.5 w-3.5" />
@@ -67,24 +65,25 @@ const ProductCard = ({ product, isExpanded, onToggleExpand }: ProductCardProps) 
           </div>
 
           {/* Brand */}
-          <p className="text-[10px] sm:text-xs font-semibold text-primary uppercase tracking-wider mb-1">{brandName}</p>
+          <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">{brandName}</p>
 
           {/* Product Name */}
-          <h4 className="font-semibold text-foreground text-xs sm:text-sm mb-2 leading-snug flex-1">
+          <h4 className="font-semibold text-foreground text-sm mb-2 leading-snug flex-1">
             {product.name}
           </h4>
 
           {/* Size selector */}
           {product.sizes.length > 1 ? (
-            <div className="flex flex-wrap gap-1.5 mb-3">
+            <div className="flex flex-wrap gap-2 mb-3">
               {product.sizes.map((size) => (
                 <button
                   key={size}
                   onClick={(e) => {
                     e.stopPropagation();
                     setSelectedSize(size);
+                    trackEvent("product_size_selected", { productId: product.id, size });
                   }}
-                  className={`text-[10px] sm:text-xs px-2 py-1 rounded-md border transition-colors ${
+                  className={`text-xs px-3 py-2 min-h-10 rounded-md border transition-colors ${
                     selectedSize === size
                       ? "bg-primary text-primary-foreground border-primary"
                       : "bg-muted text-muted-foreground border-border hover:border-primary/50"
@@ -95,23 +94,34 @@ const ProductCard = ({ product, isExpanded, onToggleExpand }: ProductCardProps) 
               ))}
             </div>
           ) : product.sizes.length === 1 ? (
-            <p className="text-xs text-muted-foreground mb-3">Size: {product.sizes[0]}</p>
+            <p className="text-sm text-muted-foreground mb-3">Size: {product.sizes[0]}</p>
           ) : null}
 
           {/* Expand indicator */}
           {product.description && (
-            <div className="flex items-center justify-center mt-1">
+            <button
+              type="button"
+              onClick={() => {
+                onToggleExpand(product.id);
+                trackEvent("product_description_toggled", { productId: product.id, expanded: !isExpanded });
+              }}
+              className="mt-1 inline-flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground min-h-10"
+              aria-expanded={isExpanded}
+              aria-controls={`product-description-${product.id}`}
+            >
+              <span>{isExpanded ? "Hide details" : "Show details"}</span>
               <ChevronDown
                 className={`h-4 w-4 text-muted-foreground transition-transform duration-300 ${
                   isExpanded ? "rotate-180" : ""
                 }`}
               />
-            </div>
+            </button>
           )}
         </div>
 
         {/* Expandable description section */}
         <div
+          id={`product-description-${product.id}`}
           ref={expandRef}
           className="transition-all duration-300 ease-in-out overflow-hidden"
           style={{ maxHeight: isExpanded ? expandHeight : 0 }}
@@ -130,12 +140,17 @@ const ProductCard = ({ product, isExpanded, onToggleExpand }: ProductCardProps) 
 
         {/* Get Quote Button */}
         <div className="px-4 pb-4">
-          <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-            <Button variant="quote" size="sm" className="text-xs">
+          <Button asChild variant="quote" size="sm" className="text-sm min-h-11">
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackEvent("quote_cta_clicked", { productId: product.id, size: selectedSize || "none" })}
+            >
               <MessageCircle className="h-3.5 w-3.5" />
               Request Quote
-            </Button>
-          </a>
+            </a>
+          </Button>
         </div>
       </div>
 
