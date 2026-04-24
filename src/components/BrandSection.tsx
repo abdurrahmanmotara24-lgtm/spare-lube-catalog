@@ -30,6 +30,7 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
   const sectionRef = useRef<HTMLElement | null>(null);
   const scrollGuideRafRef = useRef<number | null>(null);
   const scrollGuideStartRef = useRef<number>(0);
+  const scrollGuideTimerRef = useRef<number | null>(null);
 
   const selectedBrandData = useMemo(
     () => brands.find((brand) => brand.id === selectedBrand) || null,
@@ -37,6 +38,8 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
   );
 
   const stopScrollGuide = () => {
+    if (scrollGuideTimerRef.current) window.clearTimeout(scrollGuideTimerRef.current);
+    scrollGuideTimerRef.current = null;
     if (scrollGuideRafRef.current) window.cancelAnimationFrame(scrollGuideRafRef.current);
     scrollGuideRafRef.current = null;
   };
@@ -47,7 +50,28 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
     mode: "fixed" | "adaptive" = "fixed",
   ) => {
     stopScrollGuide();
-    const startTimer = window.setTimeout(() => {
+    let cancelledByUser = false;
+    const stopOnUserIntent = () => {
+      cancelledByUser = true;
+      stopScrollGuide();
+    };
+    const interactionEvents: Array<keyof WindowEventMap> = [
+      "wheel",
+      "touchstart",
+      "pointerdown",
+      "keydown",
+    ];
+    const cleanupUserListeners = () => {
+      interactionEvents.forEach((eventName) =>
+        window.removeEventListener(eventName, stopOnUserIntent),
+      );
+    };
+    interactionEvents.forEach((eventName) =>
+      window.addEventListener(eventName, stopOnUserIntent, { passive: true }),
+    );
+
+    scrollGuideTimerRef.current = window.setTimeout(() => {
+      if (cancelledByUser) return;
       scrollGuideStartRef.current = performance.now();
       if (mode === "fixed") {
         const node = resolveTarget();
@@ -62,11 +86,14 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
         const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) ** 3) / 2);
 
         const animateFixed = (ts: number) => {
+          if (cancelledByUser) return;
           const p = Math.min(1, (ts - scrollGuideStartRef.current) / CAMERA_GLIDE_MS);
           const eased = easeInOutCubic(p);
           window.scrollTo({ top: from + delta * eased, left: 0, behavior: "auto" });
           if (p < 1) {
             scrollGuideRafRef.current = window.requestAnimationFrame(animateFixed);
+          } else {
+            cleanupUserListeners();
           }
         };
 
@@ -81,6 +108,7 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
       let lastTs = adaptiveStartTs;
 
       const animateAdaptive = (ts: number) => {
+        if (cancelledByUser) return;
         const node = resolveTarget();
         if (!node) {
           if (ts - adaptiveStartTs <= CAMERA_ADAPTIVE_MAX_MS) {
@@ -136,10 +164,12 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
         }
 
         if (stableFrames >= CAMERA_ADAPTIVE_SETTLE_FRAMES) {
+          cleanupUserListeners();
           return;
         }
 
         if (ts - adaptiveStartTs > CAMERA_ADAPTIVE_MAX_MS) {
+          cleanupUserListeners();
           return;
         }
         scrollGuideRafRef.current = window.requestAnimationFrame(animateAdaptive);
@@ -149,7 +179,7 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
     }, startDelayMs);
 
     return () => {
-      window.clearTimeout(startTimer);
+      cleanupUserListeners();
       stopScrollGuide();
     };
   };

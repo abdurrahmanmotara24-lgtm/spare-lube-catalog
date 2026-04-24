@@ -9,7 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import {
   BRAND_THEME_SUGGESTIONS,
   getBrandThemeSuggestion,
-  getStoredBrandThemeOverrides,
   removeStoredBrandThemeOverride,
   setStoredBrandThemeOverride,
   type BrandThemeEditable,
@@ -234,7 +233,7 @@ const SortableBrandRow = (p: RowProps) => {
             </Button>
           </div>
           <p className="sm:col-span-2 lg:col-span-4 text-[11px] text-muted-foreground">
-            Theme overrides are stored in this browser and applied when this brand is selected on the storefront.
+            Theme overrides are saved in Supabase and applied across devices when this brand is selected.
           </p>
         </div>
       )}
@@ -277,10 +276,6 @@ const BrandManager = () => {
     button_color: "0 85% 46%",
     button_foreground_color: "0 0% 100%",
   });
-  const [themeOverrides, setThemeOverrides] = useState<Record<string, BrandThemeEditable>>(
-    () => getStoredBrandThemeOverrides(),
-  );
-
   const uploadLogo = async (file: File) => {
     const ext = file.name.split(".").pop();
     const path = `${crypto.randomUUID()}.${ext}`;
@@ -324,7 +319,12 @@ const BrandManager = () => {
   };
 
   const startThemeEdit = (b: DbBrand) => {
-    const suggestion = getBrandThemeSuggestion(b.id, b.name);
+    const suggestion = getBrandThemeSuggestion(b.id, b.name, {
+      primary_color: b.theme_primary_color ?? undefined,
+      accent_color: b.theme_accent_color ?? undefined,
+      button_color: b.theme_button_color ?? undefined,
+      button_foreground_color: b.theme_button_foreground_color ?? undefined,
+    });
     setThemeDraft({
       primary_color: suggestion.primary_color,
       accent_color: suggestion.accent_color,
@@ -357,19 +357,54 @@ const BrandManager = () => {
     });
   };
 
-  const handleSaveTheme = (brandId: string) => {
-    setStoredBrandThemeOverride(brandId, themeDraft);
-    setThemeOverrides(getStoredBrandThemeOverrides());
-    toast({ title: "Theme saved", description: "Brand colors updated for this browser." });
+  const handleSaveTheme = async (brandId: string) => {
+    const { error } = await supabase
+      .from("brands")
+      .update({
+        theme_primary_color: themeDraft.primary_color,
+        theme_accent_color: themeDraft.accent_color,
+        theme_button_color: themeDraft.button_color,
+        theme_button_foreground_color: themeDraft.button_foreground_color,
+      })
+      .eq("id", brandId);
+    if (error) {
+      if (error.message.toLowerCase().includes("theme_")) {
+        setStoredBrandThemeOverride(brandId, themeDraft);
+        toast({ title: "Theme saved locally", description: "Database columns not available yet." });
+        setThemeEditingId(null);
+        return;
+      }
+      toast({ title: "Theme save failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Theme saved", description: "Brand colors synced to database." });
     setThemeEditingId(null);
+    refetch();
   };
 
-  const handleResetTheme = (brandId: string) => {
-    removeStoredBrandThemeOverride(brandId);
-    setThemeOverrides(getStoredBrandThemeOverrides());
+  const handleResetTheme = async (brandId: string) => {
+    const { error } = await supabase
+      .from("brands")
+      .update({
+        theme_primary_color: null,
+        theme_accent_color: null,
+        theme_button_color: null,
+        theme_button_foreground_color: null,
+      })
+      .eq("id", brandId);
+    if (error) {
+      if (error.message.toLowerCase().includes("theme_")) {
+        removeStoredBrandThemeOverride(brandId);
+        toast({ title: "Theme reset locally", description: "Database columns not available yet." });
+        return;
+      }
+      toast({ title: "Theme reset failed", description: error.message, variant: "destructive" });
+      return;
+    }
     const brand = brands.find((b) => b.id === brandId);
     if (brand) startThemeEdit(brand);
     toast({ title: "Theme reset", description: "Brand colors reverted to suggested/auto palette." });
+    refetch();
   };
 
   const handleDelete = async (id: string) => {
@@ -463,7 +498,12 @@ const BrandManager = () => {
                   brand={b}
                   isEditing={editingId === b.id}
                   isThemeEditing={themeEditingId === b.id}
-                  hasCustomTheme={Boolean(themeOverrides[b.id])}
+                  hasCustomTheme={Boolean(
+                    b.theme_primary_color ||
+                    b.theme_accent_color ||
+                    b.theme_button_color ||
+                    b.theme_button_foreground_color,
+                  )}
                   editName={editName}
                   editLogo={editLogo}
                   editImage={editImage}

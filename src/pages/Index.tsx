@@ -32,8 +32,14 @@ const Index = () => {
 
   const brandScopedTheme = useMemo(() => {
     if (!selectedBrand) return settings;
-    const selectedBrandName = brands.find((brand) => brand.id === selectedBrand)?.name;
-    const suggestion = getBrandThemeSuggestion(selectedBrand, selectedBrandName);
+    const selectedBrandData = brands.find((brand) => brand.id === selectedBrand);
+    const selectedBrandName = selectedBrandData?.name;
+    const suggestion = getBrandThemeSuggestion(selectedBrand, selectedBrandName, {
+      primary_color: selectedBrandData?.theme_primary_color ?? undefined,
+      accent_color: selectedBrandData?.theme_accent_color ?? undefined,
+      button_color: selectedBrandData?.theme_button_color ?? undefined,
+      button_foreground_color: selectedBrandData?.theme_button_foreground_color ?? undefined,
+    });
     return {
       ...settings,
       primary_color: suggestion.primary_color,

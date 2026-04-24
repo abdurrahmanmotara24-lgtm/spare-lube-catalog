@@ -22,6 +22,10 @@ export type Database = {
           logo: string | null
           name: string
           sort_order: number
+          theme_accent_color: string | null
+          theme_button_color: string | null
+          theme_button_foreground_color: string | null
+          theme_primary_color: string | null
           updated_at: string
         }
         Insert: {
@@ -31,6 +35,10 @@ export type Database = {
           logo?: string | null
           name: string
           sort_order?: number
+          theme_accent_color?: string | null
+          theme_button_color?: string | null
+          theme_button_foreground_color?: string | null
+          theme_primary_color?: string | null
           updated_at?: string
         }
         Update: {
@@ -40,6 +48,10 @@ export type Database = {
           logo?: string | null
           name?: string
           sort_order?: number
+          theme_accent_color?: string | null
+          theme_button_color?: string | null
+          theme_button_foreground_color?: string | null
+          theme_primary_color?: string | null
           updated_at?: string
         }
         Relationships: []

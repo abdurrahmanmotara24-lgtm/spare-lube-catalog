@@ -7,6 +7,10 @@ export interface DbBrand {
   image_url: string | null;
   logo: string | null;
   sort_order: number;
+  theme_primary_color: string | null;
+  theme_accent_color: string | null;
+  theme_button_color: string | null;
+  theme_button_foreground_color: string | null;
 }
 
 export function useDbBrands() {

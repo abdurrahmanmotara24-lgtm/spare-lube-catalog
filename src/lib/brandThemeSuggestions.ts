@@ -136,10 +136,21 @@ export function removeStoredBrandThemeOverride(brandId: string) {
 }
 
 // Generates a stable fallback palette so any custom brand still changes theme.
-export function getBrandThemeSuggestion(brandId: string, brandName?: string): BrandThemeSuggestion {
+export function getBrandThemeSuggestion(
+  brandId: string,
+  brandName?: string,
+  dbOverride?: Partial<BrandThemeEditable> | null,
+): BrandThemeSuggestion {
   const preset = BRAND_THEME_SUGGESTIONS[brandId];
   const overrides = getStoredBrandThemeOverrides();
-  const override = overrides[brandId];
+  const localOverride = overrides[brandId];
+  const hasDbOverride = Boolean(
+    dbOverride?.primary_color ||
+      dbOverride?.accent_color ||
+      dbOverride?.button_color ||
+      dbOverride?.button_foreground_color,
+  );
+  const override = hasDbOverride ? dbOverride : localOverride;
   if (preset) {
     if (!override) return preset;
     return {
