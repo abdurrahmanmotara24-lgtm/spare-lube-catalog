@@ -42,7 +42,7 @@ const Header = ({
   return (
     <header className="sticky top-0 z-50 bg-background border-b border-border">
       <div className="max-w-7xl mx-auto section-padding">
-        <div className="flex items-center justify-between h-16 gap-4">
+        <div className="flex items-center justify-between h-16 gap-3 sm:gap-4">
           {/* Logo */}
           <div className="flex items-center shrink-0">
             <div
@@ -76,7 +76,7 @@ const Header = ({
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <Button
               variant="outline"
               size="icon"
@@ -144,7 +144,12 @@ const Header = ({
                 />
               </SheetContent>
             </Sheet>
-            <Button asChild variant="whatsapp" size="icon" className="sm:hidden h-11 w-11">
+            <Button
+              asChild
+              variant="whatsapp"
+              size="icon"
+              className="sm:hidden h-12 w-12 rounded-lg"
+            >
               <a
                 href="https://wa.me/27000000000?text=Hi%2C%20I%20would%20like%20to%20enquire%20about%20your%20products"
                 target="_blank"
@@ -161,7 +166,7 @@ const Header = ({
                   type="button"
                   variant="outline"
                   size="icon"
-                  className="sm:hidden h-11 w-11 relative border-border bg-card text-foreground hover:bg-muted hover:border-border"
+                  className="sm:hidden h-12 w-12 rounded-lg relative border-border bg-card text-foreground hover:bg-muted hover:border-border"
                   aria-label="Open quote list"
                   onClick={() => trackEvent("header_quote_panel_opened", { source: "mobile_header" })}
                 >
@@ -191,7 +196,7 @@ const Header = ({
             </Sheet>
             <button
               type="button"
-              className="sm:hidden min-h-11 min-w-11 p-2 text-foreground"
+              className="sm:hidden min-h-12 min-w-12 p-3 rounded-lg text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               onClick={() => {
                 const next = !mobileMenuOpen;
                 setMobileMenuOpen(next);
@@ -208,7 +213,7 @@ const Header = ({
 
         {/* Mobile Search */}
         {mobileMenuOpen && (
-          <div id={mobileMenuId} className="sm:hidden pb-4 space-y-3">
+          <div id={mobileMenuId} className="sm:hidden pb-5 pt-1 space-y-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
@@ -219,14 +224,14 @@ const Header = ({
                   onSearchChange(e.target.value);
                   trackEvent("header_search_changed", { hasQuery: Boolean(e.target.value.trim()), source: "mobile_menu" });
                 }}
-                className="w-full h-10 pl-10 pr-4 rounded-md bg-secondary text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full h-11 pl-10 pr-4 rounded-md bg-secondary text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={(event) => onToggleDarkMode({ x: event.clientX, y: event.clientY })}
-              className="w-full"
+              className="w-full min-h-11"
               aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
               aria-pressed={isDarkMode}
             >

@@ -20,6 +20,12 @@ interface ProductCardProps {
 const ProductCard = ({ product, isExpanded, onToggleExpand, onAddToQuote }: ProductCardProps) => {
   const [selectedSize, setSelectedSize] = useState(product.sizes[0] || "");
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [isTouchViewport, setIsTouchViewport] = useState(() =>
+    typeof window !== "undefined"
+      ? window.matchMedia("(max-width: 767px), (hover: none), (pointer: coarse)").matches
+      : false,
+  );
+  const [isMobilePreviewActive, setIsMobilePreviewActive] = useState(false);
   const expandRef = useRef<HTMLDivElement>(null);
   const [expandHeight, setExpandHeight] = useState(0);
 
@@ -29,19 +35,52 @@ const ProductCard = ({ product, isExpanded, onToggleExpand, onAddToQuote }: Prod
     }
   }, [isExpanded, product.description]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia("(max-width: 767px), (hover: none), (pointer: coarse)");
+    const syncViewport = () => {
+      const nextIsTouchViewport = mediaQuery.matches;
+      setIsTouchViewport(nextIsTouchViewport);
+      if (!nextIsTouchViewport) setIsMobilePreviewActive(false);
+    };
+
+    syncViewport();
+    mediaQuery.addEventListener("change", syncViewport);
+    return () => mediaQuery.removeEventListener("change", syncViewport);
+  }, []);
+
   const brandName = brands.find((b) => b.id === product.brand)?.name || "";
 
   return (
     <>
-      <div className="group bg-card rounded-xl border border-border/90 flex flex-col h-full overflow-hidden will-change-transform transition-[transform,box-shadow,border-color] duration-300 ease-out motion-reduce:transition-none sm:hover:-translate-y-1.5 sm:hover:scale-[1.01] sm:hover:shadow-2xl sm:hover:border-primary/30">
+      <div
+        className={`group bg-card rounded-xl border border-border/90 flex flex-col h-full overflow-hidden will-change-transform transition-[transform,box-shadow,border-color] duration-300 ease-out motion-reduce:transition-none sm:hover:-translate-y-1.5 sm:hover:scale-[1.01] sm:hover:shadow-2xl sm:hover:border-primary/30 ${
+          isMobilePreviewActive
+            ? "translate-y-[-2px] scale-[1.01] shadow-xl border-primary/30"
+            : ""
+        }`}
+        onClick={(event) => {
+          if (!isTouchViewport) return;
+          const target = event.target as HTMLElement;
+          if (target.closest("button,a,input,select,textarea,label")) return;
+          setIsMobilePreviewActive((prev) => !prev);
+        }}
+      >
         <div className="p-4 flex flex-col flex-1">
           {/* Product Image with enlarge icon */}
-          <div className="relative rounded-lg flex items-center justify-center h-32 sm:h-40 mb-4 overflow-hidden border border-border/60 bg-transparent transition-colors duration-300 sm:group-hover:border-primary/30">
+          <div
+            className={`relative rounded-lg flex items-center justify-center h-32 sm:h-40 mb-4 overflow-hidden border border-border/60 bg-transparent transition-colors duration-300 sm:group-hover:border-primary/30 ${
+              isMobilePreviewActive ? "border-primary/30" : ""
+            }`}
+          >
             {product.image ? (
               <img
                 src={product.image}
                 alt={product.name}
-                className="max-h-full max-w-full object-contain p-2 transition-transform duration-300 ease-out motion-reduce:transition-none sm:group-hover:scale-[1.04]"
+                className={`max-h-full max-w-full object-contain p-2 transition-transform duration-300 ease-out motion-reduce:transition-none sm:group-hover:scale-[1.04] ${
+                  isMobilePreviewActive ? "scale-[1.04]" : ""
+                }`}
               />
             ) : (
               <div className="h-full w-full flex flex-col items-center justify-center gap-1 bg-transparent">

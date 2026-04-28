@@ -130,6 +130,22 @@ const Index = () => {
     catalogRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!searchQuery.trim()) return;
+
+    const isMobileViewport = window.matchMedia("(max-width: 767px), (hover: none), (pointer: coarse)").matches;
+    if (!isMobileViewport) return;
+
+    const catalogNode = catalogRef.current;
+    if (!catalogNode) return;
+
+    const { top } = catalogNode.getBoundingClientRect();
+    if (top > 96) {
+      catalogNode.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [searchQuery]);
+
   const handleBrandSelect = (brandId: string | null) => {
     setSelectedBrand(brandId);
     if (brandId) {
@@ -229,43 +245,71 @@ const Index = () => {
 
       const transitionDuration = isLikelyMobile ? 900 : 1380;
 
+      const animations: Animation[] = [];
       if (toLight) {
-        root.animate(
-          { clipPath: sunriseClip },
-          {
-            duration: transitionDuration,
-            easing: "cubic-bezier(0.16, 1, 0.3, 1)",
-            pseudoElement: "::view-transition-new(root)",
-          },
+        animations.push(
+          root.animate(
+            { clipPath: sunriseClip },
+            {
+              duration: transitionDuration,
+              easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+              fill: "both",
+              pseudoElement: "::view-transition-new(root)",
+            },
+          ),
         );
-        root.animate(
-          { clipPath: [fullClip, fullClip] },
-          {
-            duration: transitionDuration,
-            easing: "ease-out",
-            pseudoElement: "::view-transition-old(root)",
-          },
+        animations.push(
+          root.animate(
+            isLikelyMobile
+              ? [
+                  { clipPath: fullClip, opacity: 1, offset: 0 },
+                  { clipPath: fullClip, opacity: 0, offset: 0.9 },
+                  { clipPath: fullClip, opacity: 0, offset: 1 },
+                ]
+              : { clipPath: [fullClip, fullClip], opacity: [1, 0] },
+            {
+              duration: transitionDuration,
+              easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+              fill: "both",
+              pseudoElement: "::view-transition-old(root)",
+            },
+          ),
         );
       } else {
-        root.animate(
-          { clipPath: nightfallClip },
-          {
-            duration: transitionDuration,
-            easing: "cubic-bezier(0.16, 1, 0.3, 1)",
-            pseudoElement: "::view-transition-new(root)",
-          },
+        animations.push(
+          root.animate(
+            { clipPath: nightfallClip },
+            {
+              duration: transitionDuration,
+              easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+              fill: "both",
+              pseudoElement: "::view-transition-new(root)",
+            },
+          ),
         );
-        root.animate(
-          { clipPath: [fullClip, fullClip] },
-          {
-            duration: transitionDuration,
-            easing: "ease-out",
-            pseudoElement: "::view-transition-old(root)",
-          },
+        animations.push(
+          root.animate(
+            isLikelyMobile
+              ? [
+                  { clipPath: fullClip, opacity: 1, offset: 0 },
+                  { clipPath: fullClip, opacity: 0, offset: 0.9 },
+                  { clipPath: fullClip, opacity: 0, offset: 1 },
+                ]
+              : { clipPath: [fullClip, fullClip], opacity: [1, 0] },
+            {
+              duration: transitionDuration,
+              easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+              fill: "both",
+              pseudoElement: "::view-transition-old(root)",
+            },
+          ),
         );
       }
 
-      await transition.finished;
+      await Promise.allSettled([transition.finished, ...animations.map((animation) => animation.finished)]);
+      if (isLikelyMobile) {
+        await new Promise((resolve) => window.setTimeout(resolve, 80));
+      }
     } finally {
       delete root.dataset.themeTransition;
       isThemeTransitioningRef.current = false;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useDbBrands } from "@/hooks/useDbBrands";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
@@ -21,13 +21,17 @@ const CAMERA_ADAPTIVE_SETTLE_FRAMES = 28;
 const CAMERA_ADAPTIVE_STABILIZE_MS = 0;
 const CAMERA_ADAPTIVE_MIN_STEP = 0.2;
 const CAMERA_SMOOTH_TIME_S = 0.4;
-const MOBILE_ANIMATION_SPEED_MULTIPLIER = 1.15;
+const MOBILE_ANIMATION_SPEED_MULTIPLIER = 1.6;
 
 const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: BrandSectionProps) => {
   const { brands, loading } = useDbBrands();
   const isMobileViewport =
     typeof window !== "undefined" && window.matchMedia("(max-width: 767px), (hover: none), (pointer: coarse)").matches;
   const mobileDurationMultiplier = isMobileViewport ? MOBILE_ANIMATION_SPEED_MULTIPLIER : 1;
+  const returnCameraStartDelayMs = RETURN_CAMERA_START_DELAY_MS;
+  const returnCameraMode: "fixed" | "adaptive" = "adaptive";
+  const tileMicroDuration = 0.32 * mobileDurationMultiplier;
+  const tileMicroDelay = 0.22;
   const tileMove = {
     type: "tween" as const,
     duration: 0.95 * mobileDurationMultiplier,
@@ -36,6 +40,7 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
 
   const focusedTileWrapperRef = useRef<HTMLDivElement | null>(null);
   const lastFocusedBrandRef = useRef<string | null>(null);
+  const [returningBrandId, setReturningBrandId] = useState<string | null>(null);
   const sectionRef = useRef<HTMLElement | null>(null);
   const scrollGuideRafRef = useRef<number | null>(null);
   const scrollGuideStartRef = useRef<number>(0);
@@ -43,6 +48,12 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
   const selectedBrandData = useMemo(
     () => brands.find((brand) => brand.id === selectedBrand) || null,
     [brands, selectedBrand],
+  );
+  const activeFocusedBrandId =
+    viewMode === "brandFocused" ? selectedBrandData?.id ?? null : returningBrandId;
+  const activeFocusedBrandData = useMemo(
+    () => brands.find((brand) => brand.id === activeFocusedBrandId) || null,
+    [brands, activeFocusedBrandId],
   );
   const shouldReduceMotion =
     typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -58,6 +69,8 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
     resolveTarget: () => HTMLElement | null,
     startDelayMs: number,
     mode: "fixed" | "adaptive" = "fixed",
+    glideDurationMs: number = CAMERA_GLIDE_MS,
+    cancelOnUserIntent: boolean = true,
   ) => {
     stopScrollGuide();
     let cancelledByUser = false;
@@ -76,9 +89,11 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
         window.removeEventListener(eventName, stopOnUserIntent),
       );
     };
-    interactionEvents.forEach((eventName) =>
-      window.addEventListener(eventName, stopOnUserIntent, { passive: true }),
-    );
+    if (cancelOnUserIntent) {
+      interactionEvents.forEach((eventName) =>
+        window.addEventListener(eventName, stopOnUserIntent, { passive: true }),
+      );
+    }
 
     scrollGuideTimerRef.current = window.setTimeout(() => {
       if (cancelledByUser) return;
@@ -97,7 +112,7 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
 
         const animateFixed = (ts: number) => {
           if (cancelledByUser) return;
-          const p = Math.min(1, (ts - scrollGuideStartRef.current) / CAMERA_GLIDE_MS);
+          const p = Math.min(1, (ts - scrollGuideStartRef.current) / glideDurationMs);
           const eased = easeInOutCubic(p);
           window.scrollTo({ top: from + delta * eased, left: 0, behavior: "auto" });
           if (p < 1) {
@@ -199,18 +214,17 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
     const returningBrandId = lastFocusedBrandRef.current;
     if (!returningBrandId) return;
     const stopFollow = startCameraFollow(
-      () =>
-        sectionRef.current?.querySelector<HTMLElement>(
-          `[data-brand-id="${returningBrandId}"][data-brand-role="grid-tile"]`,
-        ) || null,
-      RETURN_CAMERA_START_DELAY_MS,
-      "adaptive",
+      () => sectionRef.current?.querySelector<HTMLElement>(`[data-brand-role="focus-tile"]`) || null,
+      returnCameraStartDelayMs,
+      returnCameraMode,
+      CAMERA_GLIDE_MS,
+      !isMobileViewport,
     );
 
     return () => {
       stopFollow?.();
     };
-  }, [viewMode, shouldReduceMotion]);
+  }, [viewMode, shouldReduceMotion, returnCameraStartDelayMs, returnCameraMode]);
 
   useEffect(() => {
     if (shouldReduceMotion) return;
@@ -218,6 +232,7 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
     if (lastFocusedBrandRef.current !== selectedBrandData.id) {
       lastFocusedBrandRef.current = selectedBrandData.id;
     }
+    setReturningBrandId(selectedBrandData.id);
 
     return startCameraFollow(
       () => focusedTileWrapperRef.current,
@@ -225,6 +240,13 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
       "fixed",
     );
   }, [viewMode, selectedBrandData, shouldReduceMotion]);
+
+  useEffect(() => {
+    if (viewMode !== "grid" || !returningBrandId) return;
+    const returnHoldMs = Math.round(950 * mobileDurationMultiplier + 320);
+    const timeout = window.setTimeout(() => setReturningBrandId(null), returnHoldMs);
+    return () => window.clearTimeout(timeout);
+  }, [viewMode, returningBrandId, mobileDurationMultiplier]);
 
   const handleBrandClick = (brandId: string) => {
     const next = selectedBrand === brandId ? null : brandId;
@@ -293,19 +315,19 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
                     transition={{
                       ...tileMove,
                       opacity: {
-                        duration: 0.32 * mobileDurationMultiplier,
+                        duration: tileMicroDuration,
                         ease: [0.22, 1, 0.36, 1],
-                        delay: isFocused ? 0.22 : 0,
+                        delay: tileMicroDelay,
                       },
                       y: {
-                        duration: 0.32 * mobileDurationMultiplier,
+                        duration: tileMicroDuration,
                         ease: [0.22, 1, 0.36, 1],
-                        delay: isFocused ? 0.22 : 0,
+                        delay: tileMicroDelay,
                       },
                       scale: {
-                        duration: 0.32 * mobileDurationMultiplier,
+                        duration: tileMicroDuration,
                         ease: [0.22, 1, 0.36, 1],
-                        delay: isFocused ? 0.22 : 0,
+                        delay: tileMicroDelay,
                       },
                     }}
                     className={`group relative overflow-hidden flex flex-col items-center justify-center p-6 rounded-xl cursor-pointer border
@@ -348,39 +370,39 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
         </motion.div>
 
         <AnimatePresence>
-          {viewMode === "brandFocused" && selectedBrandData && (
+          {activeFocusedBrandData && (
             <motion.div
               ref={focusedTileWrapperRef}
               layout
               initial={{ opacity: 0, y: 26 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 26 }}
+              exit={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.95 * mobileDurationMultiplier, ease: CAMERA_EASE }}
               className="mt-10 flex flex-col items-center gap-3"
             >
               <motion.button
-                layoutId={`brand-tile-${selectedBrandData.id}`}
+                layoutId={`brand-tile-${activeFocusedBrandData.id}`}
                 data-brand-role="focus-tile"
-                onClick={() => handleBrandClick(selectedBrandData.id)}
+                onClick={() => handleBrandClick(activeFocusedBrandData.id)}
                 aria-pressed
-                aria-label={`${selectedBrandData.name} selected`}
+                aria-label={`${activeFocusedBrandData.name} selected`}
                 transition={tileMove}
                 className="group relative overflow-hidden flex flex-col items-center justify-center p-6 rounded-xl cursor-pointer border bg-primary text-primary-foreground border-primary shadow-2xl ring-2 ring-primary/40 z-20 w-full max-w-[260px]"
               >
                 <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,hsl(var(--primary-foreground)/0.25),transparent_60%)]" />
                 <div className="w-full h-14 sm:h-16 flex items-center justify-center mb-3">
-                  {selectedBrandData.image_url ? (
+                  {activeFocusedBrandData.image_url ? (
                     <img
-                      src={selectedBrandData.image_url}
-                      alt={`${selectedBrandData.name} logo`}
+                      src={activeFocusedBrandData.image_url}
+                      alt={`${activeFocusedBrandData.name} logo`}
                       className="max-h-full max-w-[80%] object-contain"
                     />
                   ) : (
-                    <span className="text-3xl">{selectedBrandData.logo || "🛢️"}</span>
+                    <span className="text-3xl">{activeFocusedBrandData.logo || "🛢️"}</span>
                   )}
                 </div>
                 <span className="font-semibold text-xs sm:text-sm tracking-wide text-center text-primary-foreground">
-                  {selectedBrandData.name}
+                  {activeFocusedBrandData.name}
                 </span>
                 <span className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-primary-foreground/90">
                   Selected
@@ -389,7 +411,7 @@ const BrandSection = ({ selectedBrand, viewMode, onBrandSelect, onBackToGrid }: 
 
               <button
                 onClick={() => {
-                  trackEvent("brand_show_all_clicked", { brandId: selectedBrandData.id });
+                  trackEvent("brand_show_all_clicked", { brandId: activeFocusedBrandData.id });
                   onBackToGrid();
                 }}
                 className="text-sm font-semibold text-primary hover:underline min-h-11 px-3"
