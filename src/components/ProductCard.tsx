@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { Plus, Expand, ChevronDown, ZoomIn, ZoomOut } from "lucide-react";
+import { Plus, Expand, ChevronDown, ZoomIn, ZoomOut, ArrowLeft } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,11 +14,25 @@ import { trackEvent } from "@/lib/analytics";
 interface ProductCardProps {
   product: Product;
   isExpanded: boolean;
+  isMobilePreviewActive: boolean;
   onToggleExpand: (id: string) => void;
-  onAddToQuote: (product: Product, selectedSize: string | null) => void;
+  onMobilePreviewToggle: (id: string) => void;
+  onAddToQuote: (
+    product: Product,
+    selectedSize: string | null,
+    meta?: { sourceRect: DOMRect; imageSrc?: string },
+  ) => void;
 }
 
-const ProductCard = ({ product, isExpanded, onToggleExpand, onAddToQuote }: ProductCardProps) => {
+const ProductCard = ({
+  product,
+  isExpanded,
+  isMobilePreviewActive,
+  onToggleExpand,
+  onMobilePreviewToggle,
+  onAddToQuote,
+}: ProductCardProps) => {
+  const prefersReducedMotion = useReducedMotion();
   const [selectedSize, setSelectedSize] = useState(product.sizes[0] || "");
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [isTouchViewport, setIsTouchViewport] = useState(() =>
@@ -25,7 +40,6 @@ const ProductCard = ({ product, isExpanded, onToggleExpand, onAddToQuote }: Prod
       ? window.matchMedia("(max-width: 767px), (hover: none), (pointer: coarse)").matches
       : false,
   );
-  const [isMobilePreviewActive, setIsMobilePreviewActive] = useState(false);
   const expandRef = useRef<HTMLDivElement>(null);
   const [expandHeight, setExpandHeight] = useState(0);
 
@@ -42,13 +56,15 @@ const ProductCard = ({ product, isExpanded, onToggleExpand, onAddToQuote }: Prod
     const syncViewport = () => {
       const nextIsTouchViewport = mediaQuery.matches;
       setIsTouchViewport(nextIsTouchViewport);
-      if (!nextIsTouchViewport) setIsMobilePreviewActive(false);
+      if (!nextIsTouchViewport && isMobilePreviewActive) {
+        onMobilePreviewToggle(product.id);
+      }
     };
 
     syncViewport();
     mediaQuery.addEventListener("change", syncViewport);
     return () => mediaQuery.removeEventListener("change", syncViewport);
-  }, []);
+  }, [isMobilePreviewActive, onMobilePreviewToggle, product.id]);
 
   const brandName = brands.find((b) => b.id === product.brand)?.name || "";
 
@@ -57,14 +73,14 @@ const ProductCard = ({ product, isExpanded, onToggleExpand, onAddToQuote }: Prod
       <div
         className={`group bg-card rounded-xl border border-border/90 flex flex-col h-full overflow-hidden will-change-transform transition-[transform,box-shadow,border-color] duration-300 ease-out motion-reduce:transition-none sm:hover:-translate-y-1.5 sm:hover:scale-[1.01] sm:hover:shadow-2xl sm:hover:border-primary/30 ${
           isMobilePreviewActive
-            ? "translate-y-[-2px] scale-[1.01] shadow-xl border-primary/30"
+            ? "-translate-y-3.5 scale-[1.01] shadow-xl border-primary/30"
             : ""
         }`}
         onClick={(event) => {
           if (!isTouchViewport) return;
           const target = event.target as HTMLElement;
           if (target.closest("button,a,input,select,textarea,label")) return;
-          setIsMobilePreviewActive((prev) => !prev);
+          onMobilePreviewToggle(product.id);
         }}
       >
         <div className="p-4 flex flex-col flex-1">
@@ -181,19 +197,27 @@ const ProductCard = ({ product, isExpanded, onToggleExpand, onAddToQuote }: Prod
 
         {/* Add to Quote List Button */}
         <div className="px-4 pb-4">
-          <Button
-            type="button"
-            variant="quote"
-            size="sm"
-            className="text-xs sm:text-sm min-h-11 w-full"
-            onClick={() => {
-              onAddToQuote(product, selectedSize || null);
-              trackEvent("quote_item_added", { productId: product.id, size: selectedSize || "none" });
-            }}
+          <motion.div
+            whileTap={prefersReducedMotion ? undefined : { scale: 0.96, y: 1 }}
+            transition={{ duration: 0.12, ease: "easeOut" }}
           >
-            <Plus className="h-3.5 w-3.5" />
-            Add to Quote List
-          </Button>
+            <Button
+              type="button"
+              variant="quote"
+              size="sm"
+              className="text-xs sm:text-sm min-h-11 w-full"
+              onClick={(event) => {
+                onAddToQuote(product, selectedSize || null, {
+                  sourceRect: event.currentTarget.getBoundingClientRect(),
+                  imageSrc: product.image || undefined,
+                });
+                trackEvent("quote_item_added", { productId: product.id, size: selectedSize || "none" });
+              }}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add to Quote List
+            </Button>
+          </motion.div>
         </div>
       </div>
 
@@ -298,6 +322,16 @@ const ZoomableLightbox = ({ open, onOpenChange, src, alt }: ZoomableLightboxProp
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl bg-background/95 backdrop-blur-md border-border p-2 sm:p-4">
         <DialogTitle className="sr-only">{alt}</DialogTitle>
+
+        <button
+          type="button"
+          onClick={() => onOpenChange(false)}
+          className="absolute top-3 right-3 z-20 sm:hidden inline-flex items-center gap-1 rounded-md border border-border bg-background/90 px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted min-h-9"
+          aria-label="Back to products"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back
+        </button>
 
         {/* Zoom controls */}
         <div className="absolute top-3 left-3 z-10 flex gap-1 bg-background/80 backdrop-blur-sm rounded-md border border-border p-1">

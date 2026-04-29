@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Search, MessageCircle, Menu, X, ScrollText } from "lucide-react";
-import { motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ThemeToggleIcon } from "@/components/ui/theme-toggle-icon";
 import {
@@ -22,7 +22,10 @@ interface HeaderProps {
   onToggleDarkMode: (origin?: { x: number; y: number }) => void;
   quoteItems: QuoteListItem[];
   onRemoveQuoteItem: (productId: string, size: string | null) => void;
+  onUpdateQuoteItemQuantity: (productId: string, size: string | null, quantity: number) => void;
   onClearQuoteList: () => void;
+  onQuoteTargetReady?: (target: "desktop" | "mobile", element: HTMLButtonElement | null) => void;
+  quoteCountPulseKey?: number;
 }
 
 const Header = ({
@@ -32,7 +35,10 @@ const Header = ({
   onToggleDarkMode,
   quoteItems,
   onRemoveQuoteItem,
+  onUpdateQuoteItemQuantity,
   onClearQuoteList,
+  onQuoteTargetReady,
+  quoteCountPulseKey = 0,
 }: HeaderProps) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuId = "mobile-header-menu";
@@ -117,17 +123,27 @@ const Header = ({
                   variant="outline"
                   size="sm"
                   className="hidden sm:inline-flex relative border-border bg-card text-foreground hover:bg-muted hover:border-border"
+                  ref={(element) => onQuoteTargetReady?.("desktop", element)}
                   onClick={() => trackEvent("header_quote_panel_opened", { source: "desktop_header" })}
                 >
                   <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted ring-1 ring-border">
                     <ScrollText className="h-3.5 w-3.5" />
                   </span>
                   Quote List
-                  {quoteCount > 0 && (
-                    <span className="ml-1 inline-flex min-w-5 h-5 px-1 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold ring-2 ring-background shadow-sm">
-                      {quoteCount}
-                    </span>
-                  )}
+                  <AnimatePresence initial={false} mode="wait">
+                    {quoteCount > 0 && (
+                      <motion.span
+                        key={`${quoteCount}-${quoteCountPulseKey}-desktop`}
+                        initial={prefersReducedMotion ? { opacity: 1 } : { scale: 0.72, opacity: 0, y: -3 }}
+                        animate={prefersReducedMotion ? { opacity: 1 } : { scale: 1, opacity: 1, y: 0 }}
+                        exit={prefersReducedMotion ? { opacity: 1 } : { scale: 0.72, opacity: 0, y: -3 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                        className="ml-1 inline-flex min-w-5 h-5 px-1 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold ring-2 ring-background shadow-sm"
+                      >
+                        {quoteCount}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
@@ -140,6 +156,7 @@ const Header = ({
                 <QuoteListSection
                   items={quoteItems}
                   onRemoveItem={onRemoveQuoteItem}
+                  onUpdateQuantity={onUpdateQuoteItemQuantity}
                   onClearAll={onClearQuoteList}
                 />
               </SheetContent>
@@ -168,16 +185,26 @@ const Header = ({
                   size="icon"
                   className="sm:hidden h-12 w-12 rounded-lg relative border-border bg-card text-foreground hover:bg-muted hover:border-border"
                   aria-label="Open quote list"
+                  ref={(element) => onQuoteTargetReady?.("mobile", element)}
                   onClick={() => trackEvent("header_quote_panel_opened", { source: "mobile_header" })}
                 >
                   <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted ring-1 ring-border">
                     <ScrollText className="h-3.5 w-3.5" />
                   </span>
-                  {quoteCount > 0 && (
-                    <span className="absolute -top-1 -right-1 inline-flex min-w-5 h-5 px-1 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold ring-2 ring-background shadow-sm">
-                      {quoteCount}
-                    </span>
-                  )}
+                  <AnimatePresence initial={false} mode="wait">
+                    {quoteCount > 0 && (
+                      <motion.span
+                        key={`${quoteCount}-${quoteCountPulseKey}-mobile`}
+                        initial={prefersReducedMotion ? { opacity: 1 } : { scale: 0.72, opacity: 0, y: -3 }}
+                        animate={prefersReducedMotion ? { opacity: 1 } : { scale: 1, opacity: 1, y: 0 }}
+                        exit={prefersReducedMotion ? { opacity: 1 } : { scale: 0.72, opacity: 0, y: -3 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                        className="absolute -top-1 -right-1 inline-flex min-w-5 h-5 px-1 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold ring-2 ring-background shadow-sm"
+                      >
+                        {quoteCount}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
@@ -190,6 +217,7 @@ const Header = ({
                 <QuoteListSection
                   items={quoteItems}
                   onRemoveItem={onRemoveQuoteItem}
+                  onUpdateQuantity={onUpdateQuoteItemQuantity}
                   onClearAll={onClearQuoteList}
                 />
               </SheetContent>
@@ -211,22 +239,9 @@ const Header = ({
           </div>
         </div>
 
-        {/* Mobile Search */}
+        {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div id={mobileMenuId} className="sm:hidden pb-5 pt-1 space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search products..."
-                value={searchQuery}
-                onChange={(e) => {
-                  onSearchChange(e.target.value);
-                  trackEvent("header_search_changed", { hasQuery: Boolean(e.target.value.trim()), source: "mobile_menu" });
-                }}
-                className="w-full h-11 pl-10 pr-4 rounded-md bg-secondary text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
             <Button
               variant="outline"
               size="sm"

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import TrustBar from "@/components/TrustBar";
@@ -9,6 +10,7 @@ import WhyChoose from "@/components/WhyChoose";
 import ContactSection from "@/components/ContactSection";
 import Footer from "@/components/Footer";
 import WhatsAppFab from "@/components/WhatsAppFab";
+import ScrollToTopFab from "@/components/ScrollToTopFab";
 import { type QuoteListItem } from "@/components/QuoteListSection";
 import type { Product } from "@/data/products";
 import { getBrandThemeSuggestion } from "@/lib/brandThemeSuggestions";
@@ -19,6 +21,15 @@ const QUOTE_LIST_STORAGE_KEY = "spare-lube-quote-list";
 
 const Index = () => {
   type ThemeToggleOrigin = { x: number; y: number };
+  type AddToQuoteMeta = { sourceRect: DOMRect; imageSrc?: string };
+  type FlyToQuoteAnimation = {
+    id: number;
+    fromX: number;
+    fromY: number;
+    toX: number;
+    toY: number;
+    imageSrc?: string;
+  };
   type ViewTransitionCapableDocument = Document & {
     startViewTransition?: (updateCallback: () => void) => {
       ready: Promise<void>;
@@ -56,6 +67,11 @@ const Index = () => {
 
   const catalogRef = useRef<HTMLDivElement>(null);
   const isThemeTransitioningRef = useRef(false);
+  const quoteDesktopButtonRef = useRef<HTMLButtonElement | null>(null);
+  const quoteMobileButtonRef = useRef<HTMLButtonElement | null>(null);
+  const flyAnimationCounterRef = useRef(0);
+  const [flyToQuoteAnimation, setFlyToQuoteAnimation] = useState<FlyToQuoteAnimation | null>(null);
+  const [quoteCountPulseKey, setQuoteCountPulseKey] = useState(0);
 
   const brandScopedTheme = useMemo(() => {
     if (!selectedBrand) return settings;
@@ -165,7 +181,13 @@ const Index = () => {
     setBrandViewMode(brandId ? "brandFocused" : "grid");
   };
 
-  const handleAddToQuote = (product: Product, selectedSize: string | null) => {
+  const getQuoteTargetRect = () => {
+    const isSmallViewport = window.matchMedia("(max-width: 639px)").matches;
+    const targetElement = isSmallViewport ? quoteMobileButtonRef.current : quoteDesktopButtonRef.current;
+    return targetElement?.getBoundingClientRect() ?? null;
+  };
+
+  const handleAddToQuote = (product: Product, selectedSize: string | null, meta?: AddToQuoteMeta) => {
     const brandName = brands.find((brand) => brand.id === product.brand)?.name ?? "Brand";
 
     setQuoteItems((prev) => {
@@ -190,10 +212,44 @@ const Index = () => {
         index === existingIndex ? { ...item, quantity: item.quantity + 1 } : item,
       );
     });
+
+    if (!meta || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+
+    const targetRect = getQuoteTargetRect();
+    if (!targetRect) {
+      return;
+    }
+
+    flyAnimationCounterRef.current += 1;
+    setFlyToQuoteAnimation({
+      id: flyAnimationCounterRef.current,
+      fromX: meta.sourceRect.left + meta.sourceRect.width / 2,
+      fromY: meta.sourceRect.top + meta.sourceRect.height / 2,
+      toX: targetRect.left + targetRect.width / 2,
+      toY: targetRect.top + targetRect.height / 2,
+      imageSrc: meta.imageSrc,
+    });
   };
 
   const handleRemoveQuoteItem = (productId: string, size: string | null) => {
     setQuoteItems((prev) => prev.filter((item) => !(item.productId === productId && item.size === size)));
+  };
+
+  const handleUpdateQuoteItemQuantity = (
+    productId: string,
+    size: string | null,
+    quantity: number,
+  ) => {
+    const nextQuantity = Math.max(1, Math.floor(quantity));
+    setQuoteItems((prev) =>
+      prev.map((item) =>
+        item.productId === productId && item.size === size
+          ? { ...item, quantity: nextQuantity }
+          : item,
+      ),
+    );
   };
 
   const handleClearQuoteList = () => {
@@ -325,7 +381,16 @@ const Index = () => {
         onToggleDarkMode={toggleDarkMode}
         quoteItems={quoteItems}
         onRemoveQuoteItem={handleRemoveQuoteItem}
+        onUpdateQuoteItemQuantity={handleUpdateQuoteItemQuantity}
         onClearQuoteList={handleClearQuoteList}
+        quoteCountPulseKey={quoteCountPulseKey}
+        onQuoteTargetReady={(target, element) => {
+          if (target === "desktop") {
+            quoteDesktopButtonRef.current = element;
+            return;
+          }
+          quoteMobileButtonRef.current = element;
+        }}
       />
       <Hero onBrowseClick={scrollToCatalog} />
       <TrustBar />
@@ -352,7 +417,43 @@ const Index = () => {
       <WhyChoose />
       <ContactSection />
       <Footer />
+      <ScrollToTopFab />
       <WhatsAppFab />
+      <AnimatePresence>
+        {flyToQuoteAnimation && (
+          <motion.div
+            key={flyToQuoteAnimation.id}
+            className="pointer-events-none fixed left-0 top-0 z-[70] h-10 w-10 overflow-hidden rounded-full border border-primary/40 bg-primary/20 shadow-lg backdrop-blur-sm"
+            initial={{
+              x: flyToQuoteAnimation.fromX - 20,
+              y: flyToQuoteAnimation.fromY - 20,
+              scale: 1,
+              opacity: 0.95,
+            }}
+            animate={{
+              x: flyToQuoteAnimation.toX - 20,
+              y: flyToQuoteAnimation.toY - 20,
+              scale: 0.3,
+              opacity: 0.1,
+            }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.58, ease: [0.22, 1, 0.36, 1] }}
+            onAnimationComplete={() => {
+              setFlyToQuoteAnimation(null);
+              setQuoteCountPulseKey((previous) => previous + 1);
+            }}
+          >
+            {flyToQuoteAnimation.imageSrc ? (
+              <img
+                src={flyToQuoteAnimation.imageSrc}
+                alt=""
+                className="h-full w-full object-cover opacity-80"
+                aria-hidden
+              />
+            ) : null}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

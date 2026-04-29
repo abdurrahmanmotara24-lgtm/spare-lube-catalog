@@ -18,7 +18,11 @@ interface ProductCatalogProps {
   onSearchChange: (query: string) => void;
   onCategoryChange: (cat: string | null) => void;
   onSizeChange: (size: string | null) => void;
-  onAddToQuote: (product: Product, selectedSize: string | null) => void;
+  onAddToQuote: (
+    product: Product,
+    selectedSize: string | null,
+    meta?: { sourceRect: DOMRect; imageSrc?: string },
+  ) => void;
 }
 
 const allSizes = ["250ml", "500ml", "750ml", "1L", "5L", "20L"];
@@ -36,12 +40,17 @@ const ProductCatalog = ({
   onAddToQuote,
 }: ProductCatalogProps) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [mobilePreviewId, setMobilePreviewId] = useState<string | null>(null);
   const { dbProducts, loading } = useDbProducts();
   const { brands } = useDbBrands();
   const { categories } = useDbCategories();
 
   const handleToggleExpand = useCallback((id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
+  }, []);
+
+  const handleMobilePreviewToggle = useCallback((id: string) => {
+    setMobilePreviewId((prev) => (prev === id ? null : id));
   }, []);
 
   const allProducts = useMemo(() => dbProducts, [dbProducts]);
@@ -333,7 +342,9 @@ const ProductCatalog = ({
                   key={product.id}
                   product={product}
                   isExpanded={expandedId === product.id}
+                  isMobilePreviewActive={mobilePreviewId === product.id}
                   onToggleExpand={handleToggleExpand}
+                  onMobilePreviewToggle={handleMobilePreviewToggle}
                   onAddToQuote={onAddToQuote}
                 />
               ))}
